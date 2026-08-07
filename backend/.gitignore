@@ -1,0 +1,3 @@
+# Backend local database (never commit)
+db.json
+node_modules/

@@ -1,0 +1,66 @@
+[
+  {
+    "id": "pair-001",
+    "title_a": "The Kumasi Heist - Act 1 (Original)",
+    "title_b": "The Kumasi Heist - Act 1 (Direct Copy)",
+    "script_a": "INT. BANK VAULT - NIGHT\nKOBINA (30s, intense) picks the electronic lock. Sweat drips onto his screen.\nKOBINA\nThree seconds. If the security grid cycles, we're trapped.\nABENA (20s, sharp) monitors the radio chatter.\nABENA\nGuards are moving to the west wing. Hurry up!\nThe vault door clicks. Green indicator lights flash on.",
+    "script_b": "INT. BANK VAULT - NIGHT\nKOBINA (30s, intense) picks the electronic lock. Sweat drips onto his screen.\nKOBINA\nThree seconds. If the security grid cycles, we're trapped.\nABENA (20s, sharp) monitors the radio chatter.\nABENA\nGuards are moving to the west wing. Hurry up!\nThe vault door clicks. Green indicator lights flash on.",
+    "category": "direct_copy",
+    "expected_similarity": 1.0,
+    "is_plagiarism": true,
+    "metadata": {
+      "source": "ScriptIQ Benchmark Suite",
+      "genre": "Thriller",
+      "author_a": "Kareem R.",
+      "author_b": "Unknown"
+    }
+  },
+  {
+    "id": "pair-002",
+    "title_a": "Accra Market Night - Scene 3",
+    "title_b": "Accra Market Night - Scene 3 (Paraphrased)",
+    "script_a": "EXT. MAKOLA MARKET - DAY\nRain pours over blue tarpaulins. MAMA ESI counts stacks of Ghanaian Cedi notes under a kerosene lamp.\nMAMA ESI\nThe rain always brings the dishonest buyers. Keep your eyes on the spice bags.\nKWESI nods and tightens his apron.",
+    "script_b": "EXT. MAKOLA BAZAAR - DAY\nHeavy rain falls on blue plastic covers. MOTHER ESI calculates piles of currency notes beneath an oil lantern.\nMOTHER ESI\nDownpours always attract deceptive customers. Watch the bags of spices carefully.\nKWESI agrees and fastens his apron.",
+    "category": "paraphrased_copy",
+    "expected_similarity": 0.82,
+    "is_plagiarism": true,
+    "metadata": {
+      "source": "ScriptIQ Benchmark Suite",
+      "genre": "Drama",
+      "author_a": "Emmanuella A.",
+      "author_b": "Student B"
+    }
+  },
+  {
+    "id": "pair-003",
+    "title_a": "Sci-Fi Protocol Alpha",
+    "title_b": "Deep Space Station Gamma",
+    "script_a": "INT. COMMAND DECK - FUTURE\nCAPTAIN VANE stares at the orbital radar monitor.\nCAPTAIN VANE\nInitiate full sub-light dampener shields before entering planetary orbit.\nLIEUTENANT TANYA\nShields active at ninety percent power, sir.",
+    "script_b": "INT. HISTORICAL ARCHIVE - 1920\nPROFESSOR ARMITAGE opens a dusty leather manuscript.\nPROFESSOR ARMITAGE\nThe ancient hieroglyphs describe a buried temple south of Cairo.\nEDWARD\nShall I prepare the camels for tomorrow's expedition?",
+    "category": "original_different",
+    "expected_similarity": 0.05,
+    "is_plagiarism": false,
+    "metadata": {
+      "source": "ScriptIQ Benchmark Suite",
+      "genre": "Sci-Fi / Historical",
+      "author_a": "Author X",
+      "author_b": "Author Y"
+    }
+  },
+  {
+    "id": "pair-004",
+    "title_a": "Campus Confidential - Chapter 1",
+    "title_b": "University Secrets - Chapter 1 (Restructured)",
+    "script_a": "INT. LECTURE HALL - MORNING\nDr. Mensah writes differential equations on the chalkboard. Students type feverishly on laptops.\nDR. MENSAH\nRemember that assignment submission closes tonight at midnight sharp. No extensions.\nYAO whispers to SAMIRA.\nYAO\nDid you finish part three of the algorithm problem set?",
+    "script_b": "INT. LECTURE HALL - MORNING\nYAO (sotto voice to SAMIRA)\nHave you completed question three of the algorithm assignment?\nDR. MENSAH (at the chalkboard)\nAssignment portals lock at midnight tonight with zero exceptions.\nStudents continue taking notes on their computers as Dr. Mensah solves equations.",
+    "category": "scene_restructure",
+    "expected_similarity": 0.75,
+    "is_plagiarism": true,
+    "metadata": {
+      "source": "ScriptIQ Benchmark Suite",
+      "genre": "Academic Drama",
+      "author_a": "Student C",
+      "author_b": "Student D"
+    }
+  }
+]

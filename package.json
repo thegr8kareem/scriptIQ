@@ -1,0 +1,30 @@
+{
+  "name": "scriptiq",
+  "version": "2.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Browser-based plagiarism detection for lecturers — local-first analysis with secure authentication.",
+  "scripts": {
+    "dev": "vite",
+    "dev:backend": "node --watch backend/server.js",
+    "dev:full": "concurrently --names \"frontend,backend\" --prefix-colors \"cyan,magenta\" \"npm run dev\" \"npm run dev:backend\"",
+    "build": "vite build",
+    "preview": "vite preview",
+    "test": "node tests/run-tests.js",
+    "test:archive": "node tests/test-archive.js"
+  },
+  "keywords": ["plagiarism", "education", "local-first"],
+  "license": "ISC",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.110.8",
+    "concurrently": "^9.1.2",
+    "gsap": "^3.15.0",
+    "lenis": "^1.3.25",
+    "vite": "^8.1.5"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.3",
+    "tailwindcss": "^4.3.3",
+    "jszip": "^3.10.1"
+  }
+}

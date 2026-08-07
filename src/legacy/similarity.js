@@ -1,0 +1,230 @@
+/**
+ * ScriptIQ — similarity scoring (Phase 2).
+ *
+ * Two independent pieces, both implemented from scratch so the logic is
+ * fully inspectable:
+ *
+ * 1. TF-IDF + cosine similarity → the headline score for a document pair.
+ * 2. Shared n-gram matching → the concrete passages to highlight, graded
+ *    by run length (longer copied runs = stronger evidence).
+ *
+ * Public API:
+ *   ScriptIQ.similarity.buildVectors(tokenLists)  → array of TF-IDF Maps
+ *   ScriptIQ.similarity.cosine(vecA, vecB)        → 0..1
+ *   ScriptIQ.similarity.findMatches(tokensA, tokensB, minRun?) → spans
+ */
+window.ScriptIQ = window.ScriptIQ || {};
+
+ScriptIQ.similarity = (function () {
+  "use strict";
+
+  // ---------------------------------------------------------------- TF-IDF
+
+  /**
+   * Build one TF-IDF vector per document.
+   *
+   * @param tokenLists  array of token arrays (stopwords already removed),
+   *                    one per document. IDF is computed over this whole
+   *                    corpus, so pass every uploaded document — with a
+   *                    batch, terms shared by only two essays weigh more
+   *                    than terms every essay uses.
+   * @returns           array of Map(term → weight), same order as input.
+   *
+   * TF  = count(term in doc) / totalTokens(doc)      (length-normalized)
+   * IDF = ln((1 + N) / (1 + df)) + 1                 (smoothed)
+   *
+   * The smoothing matters: with the textbook ln(N/df) and only two
+   * documents, every term they share gets IDF = ln(2/2) = 0, which would
+   * erase exactly the overlap we're trying to measure. The "+1" keeps
+   * shared terms in play while still down-weighting ubiquitous ones.
+   */
+  function buildVectors(tokenLists) {
+    const N = tokenLists.length;
+
+    // Document frequency: in how many documents does each term appear?
+    const df = new Map();
+    for (const tokens of tokenLists) {
+      for (const term of new Set(tokens)) {
+        df.set(term, (df.get(term) || 0) + 1);
+      }
+    }
+
+    return tokenLists.map((tokens) => {
+      const counts = new Map();
+      for (const term of tokens) {
+        counts.set(term, (counts.get(term) || 0) + 1);
+      }
+      const vector = new Map();
+      for (const [term, count] of counts) {
+        const tf = count / tokens.length;
+        const idf = Math.log((1 + N) / (1 + df.get(term))) + 1;
+        vector.set(term, tf * idf);
+      }
+      return vector;
+    });
+  }
+
+  /**
+   * Cosine similarity between two sparse vectors (Maps).
+   * cos(A, B) = (A · B) / (‖A‖ ‖B‖), giving 0 (nothing shared) to 1
+   * (identical direction — same term proportions).
+   */
+  function cosine(vecA, vecB) {
+    // Iterate the smaller vector for the dot product.
+    const [small, large] = vecA.size <= vecB.size ? [vecA, vecB] : [vecB, vecA];
+
+    let dot = 0;
+    for (const [term, weight] of small) {
+      const other = large.get(term);
+      if (other !== undefined) dot += weight * other;
+    }
+
+    let normA = 0;
+    for (const w of vecA.values()) normA += w * w;
+    let normB = 0;
+    for (const w of vecB.values()) normB += w * w;
+
+    if (normA === 0 || normB === 0) return 0;
+    return dot / (Math.sqrt(normA) * Math.sqrt(normB));
+  }
+
+  // ------------------------------------------------------- n-gram matching
+
+  /** Run-length → evidence strength (drives highlight color). */
+  function strengthOf(runLength) {
+    if (runLength >= 8) return "strong";
+    if (runLength >= 5) return "medium";
+    return "weak";
+  }
+
+  const STRENGTH_RANK = { weak: 0, medium: 1, strong: 2 };
+
+  /**
+   * Find shared word runs between two documents.
+   *
+   * @param tokensA / tokensB  offset tokens from
+   *                           pipeline.tokenizeWithOffsets: {norm,start,end}
+   * @param minRun             shortest run to report (default 3 words —
+   *                           below that, matches are mostly coincidence)
+   * @returns { spansA, spansB, coverageA, coverageB }
+   *          spans are {start, end, strength} character ranges into the
+   *          RAW text, merged and sorted; coverage is the fraction of a
+   *          document's tokens that sit inside some match.
+   *
+   * Algorithm: index every `minRun`-gram of B by a joined-string key, then
+   * scan A; on a seed hit, extend the run greedily and keep the longest
+   * extension. Classic seed-and-extend — O(A + B + hits) in practice.
+   * Runs made purely of stopwords ("and so on the...") are discarded.
+   */
+  function findMatches(tokensA, tokensB, minRun = 3) {
+    const STOPWORDS = ScriptIQ.pipeline.STOPWORDS;
+    const spansA = [];
+    const spansB = [];
+    let matchedA = 0;
+    let matchedB = 0;
+
+    if (tokensA.length >= minRun && tokensB.length >= minRun) {
+      // Seed index over B.
+      const seeds = new Map();
+      for (let j = 0; j + minRun <= tokensB.length; j++) {
+        const key = gramKey(tokensB, j, minRun);
+        let list = seeds.get(key);
+        if (!list) seeds.set(key, (list = []));
+        list.push(j);
+      }
+
+      let i = 0;
+      while (i + minRun <= tokensA.length) {
+        const candidates = seeds.get(gramKey(tokensA, i, minRun));
+        let bestLen = 0;
+        let bestJ = -1;
+
+        if (candidates) {
+          for (const j of candidates) {
+            let len = minRun;
+            while (
+              i + len < tokensA.length &&
+              j + len < tokensB.length &&
+              tokensA[i + len].norm === tokensB[j + len].norm
+            ) {
+              len++;
+            }
+            if (len > bestLen) {
+              bestLen = len;
+              bestJ = j;
+            }
+          }
+        }
+
+        const meaningful =
+          bestLen > 0 &&
+          hasNonStopword(tokensA, i, bestLen, STOPWORDS);
+
+        if (meaningful) {
+          const strength = strengthOf(bestLen);
+          spansA.push({
+            start: tokensA[i].start,
+            end: tokensA[i + bestLen - 1].end,
+            strength,
+          });
+          spansB.push({
+            start: tokensB[bestJ].start,
+            end: tokensB[bestJ + bestLen - 1].end,
+            strength,
+          });
+          matchedA += bestLen;
+          matchedB += bestLen;
+          i += bestLen; // consume the matched run on the A side
+        } else {
+          i++;
+        }
+      }
+    }
+
+    return {
+      spansA: mergeSpans(spansA),
+      spansB: mergeSpans(spansB),
+      coverageA: tokensA.length ? Math.min(1, matchedA / tokensA.length) : 0,
+      coverageB: tokensB.length ? Math.min(1, matchedB / tokensB.length) : 0,
+    };
+  }
+
+  function gramKey(tokens, at, n) {
+    let key = tokens[at].norm;
+    for (let k = 1; k < n; k++) key += "\u0000" + tokens[at + k].norm;
+    return key;
+  }
+
+  function hasNonStopword(tokens, at, len, STOPWORDS) {
+    for (let k = 0; k < len; k++) {
+      if (!STOPWORDS.has(tokens[at + k].norm)) return true;
+    }
+    return false;
+  }
+
+  /**
+   * Sort spans and merge overlaps (the B side can overlap when the same
+   * passage in B matches several places in A). A merged span keeps the
+   * strongest strength of its parts.
+   */
+  function mergeSpans(spans) {
+    if (spans.length === 0) return [];
+    const sorted = [...spans].sort((a, b) => a.start - b.start);
+    const merged = [sorted[0]];
+    for (let k = 1; k < sorted.length; k++) {
+      const span = sorted[k];
+      const last = merged[merged.length - 1];
+      if (span.start <= last.end) {
+        last.end = Math.max(last.end, span.end);
+        if (STRENGTH_RANK[span.strength] > STRENGTH_RANK[last.strength]) {
+          last.strength = span.strength;
+        }
+      } else {
+        merged.push({ ...span });
+      }
+    }
+    return merged;
+  }
+
+  return { buildVectors, cosine, findMatches };
+})();

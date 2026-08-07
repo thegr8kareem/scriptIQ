@@ -1,0 +1,18 @@
+[
+  {
+    "id": "pair-004",
+    "title_a": "Campus Confidential - Chapter 1",
+    "title_b": "University Secrets - Chapter 1 (Restructured)",
+    "category": "scene_restructure",
+    "expected_similarity": 0.75,
+    "is_plagiarism": true,
+    "metrics": {
+      "wordCountA": 45,
+      "wordCountB": 44,
+      "jaccard": 0.386
+    },
+    "script_a_len": 304,
+    "script_b_len": 297,
+    "processed_at": "2026-08-03T16:07:10.880Z"
+  }
+]

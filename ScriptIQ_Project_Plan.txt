@@ -1,0 +1,416 @@
+KWAME NKRUMAH UNIVERSITY OF SCIENCE AND TECHNOLOGY
+Department of Computer Science  |  CSM 366: Mini Project
+ScriptIQ
+PROJECT PLAN & TECHNICAL ROADMAP
+Abdul Kareem Razak (8976723)  |  Emmanuella Ababu (8975923)
+Supervisor: Dr. Najim Ussiph
+June 2026
+1. Project Overview
+ScriptIQ is a fully client-side academic integrity analyser that combines TF-IDF similarity scoring, LCS-based TextDiff visualisation, and a D3.js plagiarism network graph — all running in the browser with no server installation. This document defines every language, library, and tool required to build ScriptIQ, and provides a detailed day-by-day 3-week milestone plan for the team.
+2. Languages, Libraries & Tools
+ScriptIQ is built entirely with browser-native and JavaScript-ecosystem technologies. No backend server is required — all computation runs in the client. Below is a complete breakdown by layer.
+2.1  HTML5, CSS3 & Vanilla JavaScript (Core Frontend)
+These three form the foundation of the entire application. No frontend framework (React, Vue) is needed — vanilla JavaScript keeps the project lightweight, dependency-free, and easy to demo in any browser.
+Technology
+Specific Use in ScriptIQ
+Complexity
+HTML5
+File upload dropzone, results panels, diff view layout, modal dialogs
+Low
+CSS3 (Flexbox/Grid)
+Responsive two-column diff layout, network graph panel, colour-coded diff markers
+Medium
+Vanilla JavaScript (ES6+)
+All orchestration logic: file reading, algorithm calls, DOM updates, event handling
+High
+Web Workers
+Run TF-IDF and LCS in background threads so the UI never freezes on large files
+Medium
+2.2  PDF.js — In-Browser PDF Parsing
+PDF.js (by Mozilla) extracts plain text from uploaded PDF files entirely in the browser — no upload to a server needed. It is the only way to reliably parse PDFs client-side.
+Library
+Version
+CDN / Install
+Use in ScriptIQ
+PDF.js
+4.x (latest)
+https://cdnjs.cloudflare.com/ajax/libs/pdf.js/4.2.67/pdf.min.mjs
+Extract raw text from each uploaded PDF page-by-page
+Mammoth.js
+1.x
+https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js
+Extract plain text from .docx Word documents
+Both libraries return plain text strings that feed directly into the TF-IDF and LCS algorithms
+PDF.js requires a worker file (pdf.worker.min.mjs) loaded from the same CDN
+Test both libraries on KNUST-style submission formats — Word docs are common
+2.3  D3.js — Interactive Network Graph
+D3.js (Data-Driven Documents) powers the plagiarism network graph. It handles SVG rendering, force simulation for node layout, edge weighting, and interactive zoom/drag. D3 v7 is the current stable version.
+D3 Module
+Purpose in ScriptIQ
+d3.forceSimulation()
+Position nodes using a physics-based layout — similar documents cluster together
+d3.forceLink()
+Draw edges between document nodes; edge thickness = similarity score
+d3.forceManyBody()
+Repel unrelated nodes so the graph stays readable
+d3.zoom()
+Allow pan and zoom on the network graph canvas
+d3.scaleSequential()
+Colour edges from green (low similarity) to red (high risk / high similarity)
+d3.drag()
+Make individual nodes draggable for manual exploration
+Load via CDN: https://cdnjs.cloudflare.com/ajax/libs/d3/7.9.0/d3.min.js
+Kareem's similarity scores feed directly into D3 as edge weights
+Emmanuella owns this module — it is the most visually complex part of the project
+2.4  Core Algorithms — Implemented in Pure JavaScript
+Both primary algorithms are written from scratch in vanilla JavaScript. No external library handles them — this is a core academic contribution of the project.
+TF-IDF + Cosine Similarity (Similarity Detection)
+TF-IDF (Term Frequency–Inverse Document Frequency) represents each document as a weighted vector
+Cosine Similarity computes the angle between two document vectors — 1.0 = identical, 0.0 = no overlap
+Steps to implement:
+Tokenise: split text into lowercase words, strip punctuation
+Remove stopwords: filter common words (the, a, is, of…) using a stopword list
+Compute TF for each term in each document
+Compute IDF across the full corpus (all uploaded documents)
+Multiply TF × IDF to get each document's weighted vector
+Compute dot product and vector magnitudes to get cosine score
+Longest Common Subsequence — LCS (TextDiff View)
+LCS finds the longest sequence of lines that appear in the same order in both documents
+Used to build the side-by-side diff showing additions (green), deletions (red), and unchanged text
+Steps to implement:
+Split both documents into lines (or sentences for finer granularity)
+Build the standard DP table: lcs[i][j] = length of LCS of first i and j lines
+Backtrack through the DP table to label each line as MATCH, ADD, or DELETE
+Render the labelled lines side-by-side in two scrolled panels with CSS colour coding
+2.5  AI Layer — Sentence Transformers API (Semantic Similarity)
+The AI layer detects paraphrased content that TF-IDF misses. It uses a pre-trained sentence embedding model via a free API call rather than running the model locally.
+Option
+API Endpoint
+Free Tier
+Recommended For
+HuggingFace Inference API
+https://api-inference.huggingface.co/models/sentence-transformers/all-MiniLM-L6-v2
+Yes — 1000 calls/day
+Primary choice — most relevant model
+Anthropic Claude API (via Artifacts)
+https://api.anthropic.com/v1/messages
+Yes — via Claude.ai
+Fallback — ask Claude to score semantic similarity with a structured prompt
+Cohere Embed API
+https://api.cohere.com/v1/embed
+Yes — 100 calls/day
+Alternative embedding provider
+Send pairs of extracted text blocks to the API; receive a similarity float (0.0–1.0)
+Only run AI scoring on pairs already flagged by TF-IDF (score > 0.4) to save API calls
+Display AI score alongside TF-IDF score in the results panel as a second opinion
+2.6  Data Layer — IndexedDB (In-Browser Database)
+IndexedDB is a built-in browser database that stores structured data with no installation. It persists comparison history across browser sessions.
+Object Store
+Key Fields
+Purpose
+submissions
+id, filename, extractedText, uploadedAt
+Store each uploaded document's text
+comparisons
+id, docAId, docBId, tfidfScore, aiScore, diffData, createdAt
+Store every pairwise comparison result
+schemes
+id, name, documents[ ]
+Group a batch of submissions under one exam/course
+Use the idb library (lightweight IndexedDB wrapper) via CDN for cleaner async/await syntax
+CDN: https://cdn.jsdelivr.net/npm/idb@7/build/umd.js
+Provide a 'Clear History' button so lecturers can wipe data between exam batches
+2.7  Complete Technology Summary
+Technology
+Language / Type
+Layer
+Owner
+HTML5 + CSS3
+Markup / Styling
+Presentation
+Both
+Vanilla JavaScript ES6+
+Programming Language
+All layers
+Both
+PDF.js
+JS Library
+File Parsing
+Kareem
+Mammoth.js
+JS Library
+File Parsing
+Kareem
+TF-IDF + Cosine Similarity
+Algorithm (JS)
+Processing
+Kareem
+LCS Algorithm
+Algorithm (JS)
+Processing
+Emmanuella
+D3.js v7
+JS Library
+Visualisation
+Emmanuella
+Sentence Transformers API
+External API
+AI Layer
+Emmanuella
+IndexedDB (idb wrapper)
+Browser DB
+Data Layer
+Kareem
+Web Workers
+Browser API
+Performance
+Both
+3. Detailed 3-Week Milestone Plan
+The plan maps directly to ScriptIQ's five development phases. Each week has a clear focus, daily tasks per team member, and measurable success criteria. The team of two splits responsibilities as documented in the proposal.
+Week 1 (Days 1–7): Project Shell, File Parsing & TF-IDF Engine
+Goal: A working file upload system that extracts text from PDFs and Word docs, computes TF-IDF similarity scores, and displays a basic results table.
+Day 1–2: Project Setup & HTML/CSS Shell
+Create the project folder structure: /css, /js/algorithms, /js/ui, /js/api, /assets
+Build the main index.html shell with three panels: Upload, Results, and Network Graph (placeholder)
+Implement the CSS layout: two-column diff pane, file dropzone, score table
+Add drag-and-drop file upload zone with visual feedback (border highlight on hover)
+Load PDF.js, Mammoth.js, D3.js, and idb from CDN — verify all load without errors in browser console
+Set up Git repository; both team members clone and confirm they can push/pull
+Deliverable: Static UI shell renders correctly in Chrome and Firefox; all libraries load
+Day 3–4: File Parsing Module (Kareem)
+Implement js/fileParser.js — handles both PDF and DOCX inputs
+For PDFs: use PDF.js getDocument() → getPage() → getTextContent() for each page; concatenate all page text
+For DOCX: use Mammoth.js convertToHtml() then strip HTML tags to get plain text
+Display extracted text in a scrollable preview panel so the user can verify it looks correct
+Handle edge cases: password-protected PDFs (show error), empty documents (show warning), unsupported types (.ppt) — show 'unsupported format' message
+Write manual tests: upload 3 sample PDFs and 2 DOCX files; confirm extraction accuracy
+Deliverable: extract_text(file) → string for PDF and DOCX; previewed in UI
+Day 3–4: UI Layout Refinement (Emmanuella)
+Build the results dashboard panel: similarity score cards, document name labels, risk badge (High/Medium/Low)
+Build the network graph placeholder panel with a 'No data yet' empty state
+Implement responsive layout: stacks vertically on narrow screens, side-by-side on desktop
+Design and implement the colour system: green (< 40% similarity), amber (40–70%), red (> 70%)
+Add a top navigation bar with tabs: Upload, Compare, Network, History
+Deliverable: Fully styled UI shell; all panels and tabs render correctly
+Day 5–6: TF-IDF + Cosine Similarity Engine (Kareem)
+Implement js/algorithms/tfidf.js:
+tokenise(text) — lowercase, strip punctuation, split on whitespace
+removeStopwords(tokens) — filter against a bundled English + Ghanaian English stopword list
+computeTF(tokens) — term frequency map for one document
+computeIDF(corpus) — inverse document frequency across all uploaded docs
+buildVector(tf, idf) — weighted TF-IDF vector
+cosineSimilarity(vecA, vecB) — dot product / (|A| × |B|)
+Compute pairwise scores for all uploaded documents and display in a sortable table
+Highlight matched sentences inline using the similarity score — mark top-scoring term pairs
+Test with 5 known document pairs (some copied, some original); verify scores match expectation
+Deliverable: computeSimilarity(textA, textB) → score 0.0–1.0; results displayed in table
+Day 7: IndexedDB Storage & History Panel (Kareem)
+Implement js/db.js using the idb wrapper
+saveSubmission(filename, text) — store each uploaded document
+saveComparison(docAId, docBId, scores, diffData) — store each comparison result
+Build a History tab that lists all past comparisons with their scores and dates
+Add a 'Clear All History' button with a confirmation dialog
+Deliverable: Comparisons persist across browser refresh; history tab shows past results
+Week 1 Success Criteria
+Target Day
+PDF.js extracts text from a 10-page PDF correctly
+Day 4
+Mammoth.js extracts text from a .docx file correctly
+Day 4
+TF-IDF correctly scores two identical documents at ≥ 0.95
+Day 6
+TF-IDF scores two completely different documents at ≤ 0.15
+Day 6
+Comparison results save to IndexedDB and survive page refresh
+Day 7
+All UI panels render without errors in Chrome and Firefox
+Day 7
+Git repo has ≥ 8 commits with meaningful messages
+Day 7
+Week 2 (Days 8–14): TextDiff View, Network Graph & AI Integration
+Goal: A working side-by-side diff view, a live D3.js network graph, and AI semantic scoring for paraphrase detection.
+Day 8–9: LCS TextDiff Algorithm & Rendering (Emmanuella)
+Implement js/algorithms/lcs.js:
+splitIntoLines(text) — split on newline and sentence boundaries
+buildLCSTable(linesA, linesB) — standard O(m×n) dynamic programming table
+backtrack(table, linesA, linesB) — return labelled array: [{type: 'match'|'add'|'delete', text}]
+Implement js/ui/diffRenderer.js:
+renderDiff(labelledLines) — build two scrolled <div> panels side-by-side
+Colour: match = white, add = #D4EDDA green, delete = #F8D7DA red, modify = #FFF3CD amber
+Line numbers on both panels
+Scroll both panels in sync when the user scrolls either one
+Add a 'Compare' button that takes the two selected documents and renders the diff
+Test on three document pairs: identical, partially copied, completely different
+Deliverable: Side-by-side diff renders correctly; colours are clear; panels scroll in sync
+Day 10–11: D3.js Plagiarism Network Graph (Emmanuella)
+Implement js/ui/networkGraph.js using D3 v7 force simulation
+Data format: nodes = [{id, filename}], links = [{source, target, score}]
+Node size: uniform; Node label: truncated filename
+Edge thickness: proportional to similarity score (0.1px at 0.1 score → 4px at 1.0 score)
+Edge colour: d3.scaleSequential([green, amber, red]) mapped to score 0.0–1.0
+Interaction:
+Click a node → highlight all its edges and connected nodes; dim others
+Hover an edge → tooltip showing both filenames and their similarity score
+Drag nodes to reposition; zoom and pan the whole graph
+Add a similarity threshold slider: hide edges below the chosen score to reduce clutter
+Deliverable: Live network graph renders when ≥ 3 documents are uploaded; all interactions work
+Day 12–13: AI Semantic Similarity Layer (Emmanuella)
+Implement js/api/semanticApi.js using the HuggingFace Inference API
+Only call the AI for pairs where TF-IDF score > 0.35 to stay within free tier limits
+Send POST request to sentence-transformers/all-MiniLM-L6-v2 with {inputs: {source_sentence, sentences: [...]}}
+Display AI score in the results table as a second column alongside TF-IDF score
+If AI score is ≥ 0.75 but TF-IDF is < 0.45, flag the pair with a 'Possible Paraphrase' badge
+Add loading spinner while API call is in progress; show 'API unavailable' gracefully if it fails
+Test with 5 paraphrased document pairs — verify AI catches what TF-IDF misses
+Deliverable: AI score displayed for high-risk pairs; paraphrase detection working
+Day 14: Full Pipeline Integration
+Connect all Week 1 and Week 2 modules into one cohesive flow:
+Upload → Parse → TF-IDF all pairs → save to IndexedDB → render results table
+Click any pair in the table → TextDiff view opens for that pair
+Network graph updates live as documents are added
+AI scoring runs automatically for flagged pairs
+Run an end-to-end test: upload 5 documents (mix of originals and copies); verify full flow works
+Fix any integration bugs found during the test
+Deliverable: Full system works end-to-end without manual JavaScript console interaction
+Week 2 Success Criteria
+Target Day
+LCS diff correctly labels identical lines as 'match' and changed lines as 'add'/'delete'
+Day 9
+Diff panels scroll in sync and are readable for documents up to 500 lines
+Day 9
+D3 network graph renders all nodes and edges for 10 uploaded documents
+Day 11
+Edge thickness and colour visibly reflect similarity scores
+Day 11
+AI API returns a score for a paraphrased pair and flags it as 'Possible Paraphrase'
+Day 13
+Full upload → score → diff → graph pipeline runs without error
+Day 14
+Week 3 (Days 15–21): Testing, Polish, Evaluation & Submission
+Goal: A polished, bug-free, demo-ready system with documented accuracy and a complete project report.
+Day 15–16: Performance & Edge Case Hardening
+Move TF-IDF computation into a Web Worker so the UI does not freeze on large document batches
+Test with edge cases and handle gracefully:
+Single-word or empty documents
+Documents in a language other than English (scores will be unreliable — show a warning)
+Uploading the same file twice — detect duplicates by filename + size
+Very large PDFs (50+ pages) — show progress bar during extraction
+Add a 'Batch Upload' mode: upload an entire ZIP of submissions, extract all PDFs inside
+Implement rate limiting for AI API calls: queue requests with 1-second delay to avoid 429 errors
+Deliverable: System handles all edge cases without crashing; UI stays responsive on large batches
+Day 17–18: Accuracy Evaluation (Both)
+Collect 15–20 test document pairs across three categories:
+Category A: Direct copies (expected TF-IDF score > 0.85)
+Category B: Paraphrased copies (expected AI score > 0.75, TF-IDF may be lower)
+Category C: Completely original (expected both scores < 0.30)
+Compute evaluation metrics for each category:
+True Positive Rate: flagged pairs that are actually copied
+False Positive Rate: flagged pairs that are actually original
+Precision and Recall at different score thresholds (0.4, 0.6, 0.75)
+Document results in a table — this feeds directly into the project report's evaluation chapter
+Adjust score thresholds if false positive/negative rates are unacceptable
+Deliverable: Evaluation table complete; system achieves ≥ 85% true positive rate on Category A
+Day 19: UI Polish & Report Export (Emmanuella)
+Add a 'Download Report' button that generates a printable HTML report containing:
+List of all uploaded documents
+Pairwise similarity score table
+Network graph screenshot (using html2canvas or SVG export)
+Top 5 highest-risk pairs with their diff view
+Use window.print() with a print-specific CSS stylesheet for clean PDF export from the browser
+Final UI polish: consistent spacing, hover states on all interactive elements, focus outlines for accessibility
+Test the complete UI on Chrome, Firefox, and Edge — fix any rendering differences
+Deliverable: One-click report download works; UI passes visual review in all three browsers
+Day 20: Final System Test & Bug Fixes (Both)
+Run a full end-to-end test with a realistic batch: 10 submissions for a fictional KNUST course
+Both team members independently test the system and log any bugs found
+Fix all critical bugs (crashes, wrong scores, broken diff)
+Verify IndexedDB history shows all comparisons from the test
+Confirm network graph renders correctly for all 10 documents (45 pairwise edges)
+Deliverable: System passes full end-to-end test with 0 critical bugs
+Day 21: Documentation, Demo Prep & Final Submission (Both)
+Write README.md: project description, how to run locally, how to use each feature, known limitations
+Add inline code comments to all three algorithm files (tfidf.js, lcs.js, networkGraph.js)
+Prepare demo walkthrough script: 5-minute demo covering upload, scoring, diff, and network graph
+Record a short demo video (optional but strongly recommended for viva preparation)
+Final Git commit: all code, assets, and README — tag the commit as v1.0
+Submit the project folder and report to Dr. Najim Ussiph by the deadline
+Deliverable: Complete, submitted codebase; demo rehearsed; report sections written
+Week 3 Success Criteria
+Target Day
+System handles empty, duplicate, and very large files without crashing
+Day 16
+True positive rate on direct copies ≥ 85%
+Day 18
+False positive rate on original documents ≤ 15%
+Day 18
+AI layer correctly flags paraphrased pairs in ≥ 4 out of 5 test cases
+Day 18
+Download Report generates a clean, printable HTML file
+Day 19
+Full 10-document batch test passes with 0 critical bugs
+Day 20
+README complete; code commented; Git tagged v1.0
+Day 21
+4. Full 3-Week Summary
+Week
+Focus
+Key Deliverable
+End Day
+Week 1
+Setup, Parsing & TF-IDF Engine
+Working similarity scorer with IndexedDB history
+Day 7
+Week 2
+Diff View, Network Graph & AI Layer
+Full end-to-end pipeline: upload → score → diff → graph
+Day 14
+Week 3
+Polish, Testing, Evaluation & Submission
+Demo-ready system with accuracy report and documentation
+Day 21
+5. Team Responsibility Summary
+Module
+Primary Owner
+Secondary Support
+HTML/CSS Shell & Layout
+Both
+—
+File Parsing (PDF.js + Mammoth)
+Kareem
+Emmanuella tests
+TF-IDF + Cosine Similarity Algorithm
+Kareem
+Emmanuella reviews
+IndexedDB Storage Layer
+Kareem
+Emmanuella tests
+LCS TextDiff Algorithm
+Emmanuella
+Kareem reviews
+Diff View Renderer (UI)
+Emmanuella
+Kareem tests
+D3.js Network Graph
+Emmanuella
+Kareem tests
+Sentence Transformers AI API
+Emmanuella
+Kareem integrates into results table
+Web Workers (performance)
+Both
+—
+Evaluation & Testing
+Both
+—
+Documentation & README
+Both
+—
+6. Practical Tips
+Start with a single hardcoded pair of text strings before wiring up PDF.js — confirm your algorithms work first
+For TF-IDF, expand the stopword list to include common Ghanaian academic phrases that appear in every submission ('University', 'KNUST', 'Department', 'student number')
+LCS is O(m×n) memory and time — for very long documents, chunk at the paragraph level rather than line level to keep it fast
+D3 force simulations need a cooldown period — call simulation.alphaDecay(0.05) for smoother initial layout
+The HuggingFace free API cold-starts — first request after inactivity takes ~15 seconds; show a loading message
+Test early and often on real KNUST submission PDFs — the text extraction quality determines everything downstream
+Use browser DevTools Performance tab to identify any main-thread blocking before moving heavy work to Web Workers
+ScriptIQ — Abdul Kareem Razak (8976723)  |  Emmanuella Ababu (8975923)  |  KNUST CSM 366

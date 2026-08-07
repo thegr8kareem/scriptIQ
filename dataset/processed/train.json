@@ -1,0 +1,50 @@
+[
+  {
+    "id": "pair-001",
+    "title_a": "The Kumasi Heist - Act 1 (Original)",
+    "title_b": "The Kumasi Heist - Act 1 (Direct Copy)",
+    "category": "direct_copy",
+    "expected_similarity": 1,
+    "is_plagiarism": true,
+    "metrics": {
+      "wordCountA": 53,
+      "wordCountB": 53,
+      "jaccard": 1
+    },
+    "script_a_len": 322,
+    "script_b_len": 322,
+    "processed_at": "2026-08-03T16:07:10.879Z"
+  },
+  {
+    "id": "pair-002",
+    "title_a": "Accra Market Night - Scene 3",
+    "title_b": "Accra Market Night - Scene 3 (Paraphrased)",
+    "category": "paraphrased_copy",
+    "expected_similarity": 0.82,
+    "is_plagiarism": true,
+    "metrics": {
+      "wordCountA": 43,
+      "wordCountB": 41,
+      "jaccard": 0.267
+    },
+    "script_a_len": 249,
+    "script_b_len": 264,
+    "processed_at": "2026-08-03T16:07:10.880Z"
+  },
+  {
+    "id": "pair-003",
+    "title_a": "Sci-Fi Protocol Alpha",
+    "title_b": "Deep Space Station Gamma",
+    "category": "original_different",
+    "expected_similarity": 0.05,
+    "is_plagiarism": false,
+    "metrics": {
+      "wordCountA": 33,
+      "wordCountB": 33,
+      "jaccard": 0.036
+    },
+    "script_a_len": 225,
+    "script_b_len": 228,
+    "processed_at": "2026-08-03T16:07:10.880Z"
+  }
+]

@@ -1,0 +1,68 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ScriptIQ Dataset Pair Schema",
+  "type": "object",
+  "required": [
+    "id",
+    "title_a",
+    "title_b",
+    "script_a",
+    "script_b",
+    "category",
+    "expected_similarity",
+    "is_plagiarism"
+  ],
+  "properties": {
+    "id": {
+      "type": "string",
+      "description": "Unique identifier for the benchmark script pair."
+    },
+    "title_a": {
+      "type": "string",
+      "description": "Title or identifier of original document A."
+    },
+    "title_b": {
+      "type": "string",
+      "description": "Title or identifier of comparison document B."
+    },
+    "script_a": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Full text of document A."
+    },
+    "script_b": {
+      "type": "string",
+      "minLength": 20,
+      "description": "Full text of document B."
+    },
+    "category": {
+      "type": "string",
+      "enum": [
+        "direct_copy",
+        "paraphrased_copy",
+        "scene_restructure",
+        "original_different"
+      ],
+      "description": "Relationship category between the two script samples."
+    },
+    "expected_similarity": {
+      "type": "number",
+      "minimum": 0.0,
+      "maximum": 1.0,
+      "description": "Ground truth similarity score between 0.0 (unrelated) and 1.0 (identical)."
+    },
+    "is_plagiarism": {
+      "type": "boolean",
+      "description": "Flag indicating whether this pair represents plagiarism or paraphrase risk."
+    },
+    "metadata": {
+      "type": "object",
+      "properties": {
+        "source": { "type": "string" },
+        "genre": { "type": "string" },
+        "author_a": { "type": "string" },
+        "author_b": { "type": "string" }
+      }
+    }
+  }
+}
