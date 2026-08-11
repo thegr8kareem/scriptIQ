@@ -88,13 +88,13 @@ const TESTIMONIALS = [
 ];
 
 const COMPARISON = [
-  { feature: "Price",             scriptiq: "Free forever",     turnitin: "~$2/submission",  unicheck: "~$1/submission" },
-  { feature: "Works offline",     scriptiq: "✅ Yes",           turnitin: "❌ No",            unicheck: "❌ No" },
+  { feature: "Price", scriptiq: "Free forever", turnitin: "~$2/submission", unicheck: "~$1/submission" },
+  { feature: "Works offline", scriptiq: "✅ Yes", turnitin: "❌ No", unicheck: "❌ No" },
   { feature: "Student data stays on device", scriptiq: "✅ Always", turnitin: "❌ Uploaded", unicheck: "❌ Uploaded" },
-  { feature: "Batch ZIP upload",  scriptiq: "✅ Yes",           turnitin: "⚠️ Limited",      unicheck: "⚠️ Limited" },
-  { feature: "AI semantic check", scriptiq: "✅ In-browser",    turnitin: "✅ Cloud",         unicheck: "❌ No" },
-  { feature: "D3 network graph",  scriptiq: "✅ Yes",           turnitin: "❌ No",            unicheck: "❌ No" },
-  { feature: "Open source",       scriptiq: "✅ Yes",           turnitin: "❌ No",            unicheck: "❌ No" },
+  { feature: "Batch ZIP upload", scriptiq: "✅ Yes", turnitin: "⚠️ Limited", unicheck: "⚠️ Limited" },
+  { feature: "AI semantic check", scriptiq: "✅ In-browser", turnitin: "✅ Cloud", unicheck: "❌ No" },
+  { feature: "D3 network graph", scriptiq: "✅ Yes", turnitin: "❌ No", unicheck: "❌ No" },
+  { feature: "Open source", scriptiq: "✅ Yes", turnitin: "❌ No", unicheck: "❌ No" },
 ];
 
 export function renderLanding(ctx) {
@@ -215,7 +215,7 @@ export function renderLanding(ctx) {
               <div class="testimonial-stars">★★★★★</div>
               <p class="testimonial-quote">"${t.quote}"</p>
               <footer>
-                <div class="testimonial-avatar">${t.name.split(" ").map(w => w[0]).join("").slice(0,2)}</div>
+                <div class="testimonial-avatar">${t.name.split(" ").map(w => w[0]).join("").slice(0, 2)}</div>
                 <div>
                   <div class="testimonial-name">${t.name}</div>
                   <div class="testimonial-role">${t.role}</div>
@@ -280,8 +280,16 @@ export function renderLanding(ctx) {
     if (!btn) return;
     const dest = btn.dataset.nav;
     if (dest === "app") {
-      const session = await getSession();
-      ctx.navigate(session ? "/app" : "/login");
+      btn.disabled = true;
+      btn.textContent = "Loading…";
+      try {
+        const session = await getSession();
+        ctx.navigate(session ? "/app" : "/login");
+      } catch {
+        ctx.navigate("/login");
+      } finally {
+        btn.disabled = false;
+      }
     } else {
       ctx.navigate(`/${dest}`);
     }

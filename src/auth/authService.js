@@ -122,7 +122,7 @@ export function onAuthStateChange(callback) {
   }
   // For local / demo paths, fire once with the current session.
   getSession().then(callback);
-  return () => {};
+  return () => { };
 }
 
 /**
@@ -167,7 +167,10 @@ export async function getSession() {
 /** Google OAuth (Supabase only). */
 export async function signInWithGoogle() {
   requireSupabase();
-  const redirectTo = `${window.location.origin}${window.location.pathname}#/app`;
+  // Use the bare origin as the redirect — Supabase appends its own ?code= param.
+  // detectSessionInUrl in the client will exchange the code, then onAuthStateChange
+  // fires and main.js navigates to /app. Do NOT include #/app here — it breaks PKCE.
+  const redirectTo = window.location.origin + window.location.pathname;
   const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
   if (error) throw error;
 }
@@ -202,7 +205,7 @@ export async function signUpWithEmail(email, password) {
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
-      options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}#/app` },
+      options: { emailRedirectTo: window.location.origin + window.location.pathname },
     });
     if (error) throw error;
     return data;
@@ -219,7 +222,7 @@ export async function signInWithMagicLink(email) {
   requireSupabase();
   const { error } = await supabase.auth.signInWithOtp({
     email,
-    options: { emailRedirectTo: `${window.location.origin}${window.location.pathname}#/app` },
+    options: { emailRedirectTo: window.location.origin + window.location.pathname },
   });
   if (error) throw error;
 }
