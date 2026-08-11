@@ -114,14 +114,14 @@ function localToSession(data) {
 /** Subscribe to sign-in / sign-out events (Supabase path only). */
 export function onAuthStateChange(callback) {
   if (supabase) {
-    const { data: subscription } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: subscription } = supabase.auth.onAuthStateChange((event, session) => {
       cachedSession = session;
-      callback(session);
+      callback(session, event);
     });
     return () => subscription.subscription.unsubscribe();
   }
   // For local / demo paths, fire once with the current session.
-  getSession().then(callback);
+  getSession().then((s) => callback(s, "INITIAL_SESSION"));
   return () => { };
 }
 

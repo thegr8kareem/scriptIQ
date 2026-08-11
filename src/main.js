@@ -51,12 +51,28 @@ registerRoute("/app", (ctx) => {
 // Keep session in sync across tabs; redirect from /app if signed out elsewhere.
 // Also handles the OAuth callback — when Supabase fires SIGNED_IN after exchanging
 // the ?code= param, navigate the user into the app automatically.
-onAuthStateChange((session) => {
+let authInitialized = false;
+onAuthStateChange((session, event) => {
   const path = window.location.hash.replace(/^#/, "") || "/";
+
+  // Guard: on first fire (page load with existing session), only redirect
+  // if we're already on the login page — don't yank the user away from landing.
+  if (!authInitialized) {
+    authInitialized = true;
+    if (session && path === "/login") {
+      window.location.hash = "#/app";
+    }
+    return;
+  }
+
+  // Signed out while on /app — kick to login.
   if (path.startsWith("/app") && !session) {
     window.location.hash = "#/login";
+    return;
   }
-  // After Google / magic-link OAuth lands back on the root URL, push to /app.
+
+  // OAuth / magic-link callback: Supabase fires SIGNED_IN and we're on the
+  // root URL (no hash) — push into the app.
   if (session && (path === "/" || path === "" || path === "/login")) {
     window.location.hash = "#/app";
   }
