@@ -69,26 +69,127 @@ const APP_HTML = `
         <div id="document-list" class="document-grid"></div>
       </section>
 
-      <section class="panel reveal-ready" id="graph-panel" hidden>
+      <!-- Plagiarism Standards & Grading Policies -->
+      <section class="panel reveal-ready" id="standards-panel" hidden>
         <div class="panel-heading-row">
-          <h2>3 · Batch overview</h2>
-          <label class="threshold-control">
-            Show pairs above <output id="threshold-value">25%</output>
-            <input type="range" id="threshold-slider" min="5" max="90" step="5" value="25">
-          </label>
+          <h2>3 · Plagiarism Standards &amp; Grading</h2>
         </div>
-        <p id="graph-info" class="muted"></p>
-        <svg id="graph-svg" role="img" aria-label="Similarity network graph of the uploaded batch"></svg>
-        <div class="legend graph-legend">
-          <span><span class="edge-chip edge-chip-high"></span> ≥60% — high risk</span>
-          <span><span class="edge-chip edge-chip-med"></span> 30–59% — moderate</span>
-          <span><span class="edge-chip edge-chip-low"></span> below 30%</span>
-          <span class="muted">thicker edge = more similar · click an edge to open the pair's diff · drag nodes to untangle</span>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 1rem;">
+          <div class="glass-panel" style="padding: 1.25rem;">
+            <label style="display: block; font-size: 0.78rem; font-family: 'DM Mono', monospace; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Select Institution Standard</label>
+            <select id="standards-institution" class="select-glow" style="width: 100%; padding: 0.55rem; border-radius: 8px; background: rgba(10, 16, 36, 0.6); color: var(--ink); border: 1px solid var(--panel-border); outline: none;">
+              <option value="knust">KNUST (Kwame Nkrumah Univ.)</option>
+              <option value="ug">University of Ghana (UG)</option>
+              <option value="ashesi">Ashesi University</option>
+              <option value="custom" selected>Custom Policy</option>
+            </select>
+            <p style="font-size: 0.8rem; color: var(--muted); margin: 0.75rem 0 0; line-height: 1.4;" id="standards-description">
+              Configure similarity thresholds to grade student submissions.
+            </p>
+          </div>
+          
+          <div class="glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 0.85rem;">
+            <div>
+              <label style="display: flex; justify-content: space-between; font-size: 0.78rem; font-family: 'DM Mono', monospace; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; letter-spacing: 0.05em;">
+                <span>Low Risk Limit (Green)</span>
+                <span id="label-val-low">15%</span>
+              </label>
+              <input type="range" id="standards-low" min="5" max="30" step="5" value="15" style="width: 100%; accent-color: var(--accent);">
+            </div>
+            <div>
+              <label style="display: flex; justify-content: space-between; font-size: 0.78rem; font-family: 'DM Mono', monospace; text-transform: uppercase; color: var(--muted); margin-bottom: 0.25rem; letter-spacing: 0.05em;">
+                <span>High Risk Limit (Red)</span>
+                <span id="label-val-high">30%</span>
+              </label>
+              <input type="range" id="standards-high" min="20" max="80" step="5" value="30" style="width: 100%; accent-color: var(--accent-2);">
+            </div>
+          </div>
+
+          <div class="glass-panel" style="padding: 1.25rem; border-color: var(--accent-soft);">
+            <label style="display: block; font-size: 0.78rem; font-family: 'DM Mono', monospace; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Policy Verdict Rules</label>
+            <ul style="margin: 0; padding-left: 1.1rem; font-size: 0.8rem; line-height: 1.45; color: var(--ink); display: flex; flex-direction: column; gap: 0.25rem;">
+              <li><strong style="color: var(--success);">Green (Low):</strong> Standard citations; acceptable.</li>
+              <li><strong style="color: #fbbf24;">Amber (Medium):</strong> Flags for manual review.</li>
+              <li><strong style="color: var(--danger);">Red (High):</strong> Plagiarism check failure; standard penalty.</li>
+            </ul>
+          </div>
         </div>
       </section>
 
+      <!-- Batch Overview Graph and Table List -->
+      <section class="panel reveal-ready" id="graph-panel" hidden>
+        <div class="panel-heading-row">
+          <h2>4 · Batch overview</h2>
+          <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <label class="threshold-control">
+              Show pairs above <output id="threshold-value">25%</output>
+              <input type="range" id="threshold-slider" min="5" max="90" step="5" value="25">
+            </label>
+            <button id="btn-collect-similar" class="btn btn-primary btn-small" type="button" style="display: none; padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 8px;">
+              ↓ Collect similar works (.zip)
+            </button>
+          </div>
+        </div>
+        
+        <div class="graph-layout" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1.25rem;">
+          <div style="flex: 1.8; min-width: 320px;">
+            <p id="graph-info" class="muted" style="margin-bottom: 0.5rem; font-size: 0.85rem;"></p>
+            <div class="glass-panel" style="background: rgba(10, 16, 36, 0.4); border-radius: 12px; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--panel-border);">
+              <svg id="graph-svg" role="img" aria-label="Similarity network graph of the uploaded batch" style="max-height: 380px; width: 100%;"></svg>
+            </div>
+            <div class="legend graph-legend" style="margin-top: 0.75rem; font-size: 0.78rem;">
+              <span><span class="edge-chip edge-chip-high"></span> High Risk</span>
+              <span><span class="edge-chip edge-chip-med"></span> Moderate Risk</span>
+              <span><span class="edge-chip edge-chip-low"></span> Low Risk</span>
+              <span class="muted">Click connection to compare · Drag dots to untangle</span>
+            </div>
+          </div>
+          
+          <div class="glass-panel" style="flex: 1.2; min-width: 280px; padding: 1.25rem; display: flex; flex-direction: column;">
+            <h3 style="margin-top: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--ink);">
+              📋 Flagged Similarity List
+            </h3>
+            <p style="font-size: 0.8rem; color: var(--muted); margin: 0 0 1rem; line-height: 1.4;">
+              Tabular view of all pairs exceeding your active plagiarism thresholds.
+            </p>
+            <div style="flex: 1; overflow-y: auto; max-height: 350px;">
+              <table class="history-table" style="width: 100%; font-size: 0.8rem;" id="graph-pairs-table">
+                <thead>
+                  <tr>
+                    <th>Submissions Pair</th>
+                    <th style="text-align: right; width: 60px;">Score</th>
+                    <th style="text-align: center; width: 80px;">Action</th>
+                  </tr>
+                </thead>
+                <tbody id="graph-pairs-body">
+                  <tr>
+                    <td colspan="3" class="muted" style="text-align: center; padding: 2rem;">No pairs flagged yet.</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+
+        <!-- Closely Similar Submissions List -->
+        <div id="similar-duplicates-panel" style="margin-top: 1.75rem; display: none;" class="glass-panel">
+          <div style="padding: 1.25rem; border-bottom: 1px solid var(--panel-border); background: rgba(255, 77, 109, 0.04);">
+            <h3 style="margin: 0; font-size: 1rem; color: var(--danger); display: flex; align-items: center; gap: 0.5rem; text-transform: none; letter-spacing: normal;">
+              <span>🚨</span> Closely Similar Submissions (Potential Copies)
+            </h3>
+            <p style="margin: 0.25rem 0 0; font-size: 0.8rem; color: var(--muted); text-transform: none;">
+              The following student submissions have been flagged as closely similar to each other.
+            </p>
+          </div>
+          <div id="similar-duplicates-list" style="padding: 1.25rem; display: flex; flex-direction: column; gap: 1rem;">
+            <!-- Dynamic items go here -->
+          </div>
+        </div>
+      </section>
+
+      <!-- Compare a Pair -->
       <section class="panel reveal-ready" id="compare-panel" hidden>
-        <h2>4 · Compare a pair</h2>
+        <h2>5 · Compare a pair</h2>
         <div class="compare-controls">
           <select id="select-a" aria-label="First document"></select>
           <span class="vs">vs</span>
@@ -96,36 +197,80 @@ const APP_HTML = `
           <button id="compare-btn" class="btn btn-primary" type="button">Compare</button>
         </div>
 
-        <div class="ai-strip">
-          <button id="ai-enable" class="btn" type="button">Enable AI semantic analysis</button>
-          <span id="ai-status" class="muted">
-            Optional — downloads a ~25 MB language model once, then runs fully in your
-            browser. Catches paraphrasing that word-matching misses.
-          </span>
+        <div class="glass-panel" style="padding: 1.25rem; margin-top: 1.25rem; margin-bottom: 1.25rem; border-color: var(--accent-soft);">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="flex: 1; min-width: 260px;">
+              <h4 style="margin: 0 0 0.25rem; font-size: 0.95rem; color: var(--ink); display: flex; align-items: center; gap: 0.5rem;">
+                🤖 Local AI Semantic Engine
+              </h4>
+              <p style="margin: 0; font-size: 0.82rem; color: var(--muted); line-height: 1.45;">
+                Uses Hugging Face's <code style="color: var(--accent); font-family: 'DM Mono', monospace;">all-MiniLM-L6-v2</code> model. Runs <strong>100% locally</strong> in your browser via ONNX Runtime WebAssembly. Your student papers are never sent to external servers (ensuring absolute privacy).
+              </p>
+            </div>
+            <div style="display: flex; align-items: center; gap: 1rem;">
+              <span id="ai-status" class="muted" style="font-size: 0.8rem; font-family: 'DM Mono', monospace;"></span>
+              <button id="ai-enable" class="btn btn-glow" type="button" style="padding: 0.5rem 1rem; font-size: 0.85rem; border-radius: 8px;">Enable AI</button>
+            </div>
+          </div>
         </div>
 
         <div id="compare-results" hidden>
-          <div class="score-row">
-            <div class="score-card">
-              <div class="score-value" id="score-value">—</div>
-              <div class="score-label" id="score-label"></div>
-              <div class="score-sub">TF-IDF cosine similarity</div>
+          <div class="score-row" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+            <div class="score-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+              <div class="score-value" id="score-value" style="font-size: 2.2rem; font-weight: 800; color: var(--accent);">—</div>
+              <div class="score-label" id="score-label" style="font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-top: 0.35rem;">TF-IDF similarity</div>
+              <div class="score-sub" style="font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem;">Exact word matching</div>
             </div>
-            <div class="score-card">
-              <div class="score-value" id="semantic-value">—</div>
-              <div class="score-label" id="semantic-label">AI semantic similarity</div>
-              <div class="score-sub" id="semantic-sub">enable AI to compute</div>
+            <div class="score-card glass-panel" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
+              <div class="score-value" id="semantic-value" style="font-size: 2.2rem; font-weight: 800; color: var(--accent-2);">—</div>
+              <div class="score-label" id="semantic-label" style="font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-top: 0.35rem;">AI semantic similarity</div>
+              <div class="score-sub" id="semantic-sub" style="font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem;">enable AI to compute</div>
             </div>
-            <div class="score-meta">
-              <p id="coverage-a"></p>
-              <p id="coverage-b"></p>
-              <div class="legend">
-                <span><mark class="hl-weak">3–4 words</mark></span>
-                <span><mark class="hl-medium">5–7 words</mark></span>
-                <span><mark class="hl-strong">8+ words</mark></span>
-                <span class="muted">shared word runs, by length</span>
-              </div>
+            <div class="score-card glass-panel" id="verdict-card" style="padding: 1.25rem; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; border-color: var(--border);">
+              <div class="score-value" id="verdict-value" style="font-size: 1.3rem; font-weight: 800; color: var(--muted); text-transform: uppercase;">—</div>
+              <div class="score-label" id="verdict-label" style="font-size: 0.85rem; font-weight: 600; color: var(--ink); margin-top: 0.35rem;">Plagiarism Verdict</div>
+              <div class="score-sub" id="verdict-sub" style="font-size: 0.72rem; color: var(--muted); margin-top: 0.25rem;">KNUST / Course policy</div>
             </div>
+          </div>
+
+          <!-- Score Method Explanations Key -->
+          <div class="glass-panel" style="padding: 1rem; margin-bottom: 1.25rem; font-size: 0.8rem; line-height: 1.45; color: var(--muted); display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1.25rem;">
+            <div>
+              <strong style="color: var(--accent); display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; margin-bottom: 0.25rem;">📝 TF-IDF Similarity (Word-Matching)</strong>
+              Measures matching words and phrasing. Excellent at catching direct copy-pasting, but can be bypassed if the writer changes words or uses synonyms.
+            </div>
+            <div>
+              <strong style="color: var(--accent-2); display: flex; align-items: center; gap: 0.35rem; font-size: 0.82rem; margin-bottom: 0.25rem;">🤖 AI Semantic Similarity (Meaning-Matching)</strong>
+              Measures high-level concept similarity using local context embeddings. Perfect for identifying paraphrasing, restructured sentences, or rewritten texts.
+            </div>
+          </div>
+          
+          <div class="glass-panel" style="padding: 1rem; margin-bottom: 1.25rem; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div style="display: flex; gap: 1.5rem; font-size: 0.82rem; color: var(--ink);">
+              <span id="coverage-a" style="font-weight: 600;"></span>
+              <span id="coverage-b" style="font-weight: 600;"></span>
+            </div>
+            <div class="legend" style="margin: 0; font-size: 0.78rem;">
+              <span><mark class="hl-weak">3–4 words</mark></span>
+              <span><mark class="hl-medium">5–7 words</mark></span>
+              <span><mark class="hl-strong">8+ words</mark></span>
+              <span class="muted">shared runs</span>
+            </div>
+          </div>
+
+          <!-- Similarity / Rephrasing Alert & Collection -->
+          <div id="rephrasings-alert" class="glass-panel" style="margin-top: 1.25rem; padding: 1.25rem; border: 1px solid var(--danger); background: rgba(255, 77, 109, 0.08); display: none;">
+            <h4 style="margin: 0 0 0.5rem; color: var(--danger); display: flex; align-items: center; gap: 0.5rem; font-size: 1rem; font-weight: 700;" id="rephrase-alert-title">
+              <span>⚠️</span> Similarity &amp; Paraphrase Alert
+            </h4>
+            <p style="margin: 0; font-size: 0.9rem; line-height: 1.5; color: var(--ink); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+              <span id="rephrase-alert-text">
+                This pair shows significant similarity (exact matching: <strong id="rephrase-tfidf">—</strong>, semantic similarity: <strong id="rephrase-semantic">—</strong>).
+              </span>
+              <button id="btn-collect-pair" class="btn btn-primary btn-small" type="button" style="padding: 0.35rem 0.75rem; font-size: 0.8rem; border-radius: 8px;">
+                ↓ Download pair (.zip)
+              </button>
+            </p>
           </div>
 
           <div class="view-toggle" role="tablist">
@@ -505,6 +650,8 @@ export async function renderApp(ctx) {
   }
 
   const { initScriptIQApp } = await import("../legacy/app.js");
+  window.ScriptIQ = window.ScriptIQ || {};
+  window.ScriptIQ.currentUser = session.user;
   initScriptIQApp();
 
   fadeInPage(root);

@@ -987,9 +987,26 @@ code, .tagline, .hero-badge, .stat-label, .panel h2 { font-family: "DM Mono", mo
 .auth-field input:focus { border-color: var(--accent-3); box-shadow: 0 0 0 4px rgba(85,166,255,.12); }
 
 .app-header { background: rgba(5,8,22,.72); }
-.app-main { max-width: 1240px; gap: 1.15rem; }
-.panel { border-radius: 18px; transition: border-color .25s ease, transform .25s ease; }
-.panel:hover { border-color: rgba(83,241,207,.25); }
+.app-main {
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  padding: 2rem 1.5rem !important;
+  gap: 2rem !important;
+  display: flex !important;
+  flex-direction: column !important;
+  align-items: stretch !important;
+}
+.panel {
+  border-radius: 16px !important;
+  padding: 1.75rem !important;
+  border: 1px solid var(--border) !important;
+  background: var(--panel) !important;
+  box-shadow: var(--shadow) !important;
+  transition: border-color .25s ease, transform .25s ease !important;
+}
+.panel:hover {
+  border-color: rgba(0, 245, 212, 0.25) !important;
+}
 .drop-zone { border-radius: 16px; background: linear-gradient(135deg, rgba(83,241,207,.04), rgba(147,112,255,.05)); }
 .drop-zone::after { content: "LOCAL-FIRST • ENCRYPTED IDENTITY"; display: block; margin-top: 1rem; color: var(--accent); font: 500 .67rem "DM Mono", monospace; letter-spacing: .13em; }
 .score-card { border-radius: 16px; background: linear-gradient(145deg, rgba(20,31,64,.65), rgba(7,12,29,.55)); }
@@ -1585,4 +1602,27 @@ code, .tagline, .hero-badge, .stat-label, .panel h2 { font-family: "DM Mono", mo
 }
 .profile-msg-success { color: var(--accent); }
 .profile-msg-error { color: #ff4d6d; }
+
+/* ── GOOGLE CHOOSER DIALOG ─────────────────────────────────────────── */
+.google-card {
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+}
+.modal-backdrop.show .google-card {
+  transform: translateY(0);
+}
+.google-account-row:hover {
+  background-color: #f8f9fa !important;
+}
+#google-use-another:hover {
+  background-color: #f8f9fa !important;
+}
+
+/* Prevent underline on Back to Home button */
+.auth-links button[data-nav="landing"],
+.auth-links button[data-nav="landing"]:hover,
+.auth-links button[data-nav="landing"]:focus,
+.auth-links button[data-nav="landing"]:active {
+  text-decoration: none !important;
+}
 

@@ -26,11 +26,12 @@ ScriptIQ.graph = (function () {
   const HEIGHT = 440;
   const NODE_RADIUS = 14;
 
-  let state = null; // { svg, simulation, links, linkSel, nodeSel, threshold }
+  let state = null; // { svg, simulation, links, linkSel, nodeSel, threshold, lowLimit, highLimit }
 
-  function edgeClass(score) {
-    if (score >= HIGH_RISK) return "edge-high";
-    if (score >= MODERATE) return "edge-med";
+  function edgeClass(score, low, high) {
+    const s = score * 100;
+    if (s >= high) return "edge-high";
+    if (s >= low) return "edge-med";
     return "edge-low";
   }
 
@@ -40,7 +41,7 @@ ScriptIQ.graph = (function () {
     return base.length > 16 ? base.slice(0, 15) + "…" : base;
   }
 
-  function render({ svg: svgEl, nodes, links, threshold, onEdgeClick }) {
+  function render({ svg: svgEl, nodes, links, threshold, onEdgeClick, lowLimit = 30, highLimit = 60 }) {
     if (!window.d3) {
       svgEl.outerHTML =
         "<p class='doc-error'>D3.js failed to load — check your internet connection (it is served from a CDN).</p>";
@@ -70,7 +71,7 @@ ScriptIQ.graph = (function () {
     // regardless of where the display threshold sits.
     const highRiskIds = new Set();
     for (const l of links) {
-      if (l.score >= HIGH_RISK) {
+      if (l.score * 100 >= highLimit) {
         highRiskIds.add(l.source).add(l.target);
       }
     }
@@ -80,7 +81,7 @@ ScriptIQ.graph = (function () {
       .selectAll("line")
       .data(links)
       .join("line")
-      .attr("class", (d) => "graph-edge " + edgeClass(d.score))
+      .attr("class", (d) => "graph-edge " + edgeClass(d.score, lowLimit, highLimit))
       .attr("stroke-width", (d) => 1 + d.score * 7)
       .style("cursor", "pointer")
       .on("click", (event, d) => onEdgeClick(d.source.id, d.target.id));
@@ -114,18 +115,18 @@ ScriptIQ.graph = (function () {
     const simulation = d3
       .forceSimulation(nodes)
       .force(
-        "link",
-        d3
-          .forceLink(links.filter((l) => l.score >= threshold))
-          .id((d) => d.id)
-          // Similar documents sit closer together and pull harder —
-          // that's what makes copying clusters visually obvious.
-          .distance((d) => 70 + (1 - d.score) * 180)
-          .strength((d) => 0.2 + 0.6 * d.score)
-      )
-      .force("charge", d3.forceManyBody().strength(-260))
-      .force("center", d3.forceCenter(width / 2, HEIGHT / 2))
-      .force("collide", d3.forceCollide(NODE_RADIUS + 22));
+          "link",
+          d3
+            .forceLink(links.filter((l) => l.score >= threshold))
+            .id((d) => d.id)
+            // Similar documents sit closer together and pull harder —
+            // that's what makes copying clusters visually obvious.
+            .distance((d) => 70 + (1 - d.score) * 180)
+            .strength((d) => 0.2 + 0.6 * d.score)
+        )
+        .force("charge", d3.forceManyBody().strength(-260))
+        .force("center", d3.forceCenter(width / 2, HEIGHT / 2))
+        .force("collide", d3.forceCollide(NODE_RADIUS + 22));
 
     simulation.on("tick", () => {
       // Clamp so labels stay inside the viewBox.
@@ -160,7 +161,7 @@ ScriptIQ.graph = (function () {
         })
     );
 
-    state = { svg, simulation, links, linkSel, nodeSel, threshold };
+    state = { svg, simulation, links, linkSel, nodeSel, threshold, lowLimit, highLimit };
     return applyThreshold(threshold);
   }
 
@@ -178,5 +179,5 @@ ScriptIQ.graph = (function () {
     return active.length;
   }
 
-  return { render, applyThreshold, HIGH_RISK, MODERATE };
+  return { render, applyThreshold, HIGH_RISK: 0.6, MODERATE: 0.3 };
 })();

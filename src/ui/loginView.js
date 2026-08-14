@@ -54,18 +54,11 @@ export function renderLogin(ctx) {
         </svg>
         Continue with Google
       </button>`;
-
-    const passkeyButton = supabaseMode
-      ? `<button type="button" class="auth-btn" id="btn-passkey" ${!isPasskeySupported() ? "disabled title='Requires HTTPS and a compatible browser'" : ""}>
-          🔐 Sign in with passkey
-        </button>`
-      : "";
-
+ 
     const oauthSection = `
       ${googleButton}
-      ${passkeyButton}
       <div class="auth-divider">or email</div>`;
-
+ 
     /* ── password field ─────────────────────────────────────────────── */
     const passwordField = mode !== "magic"
       ? `
@@ -76,32 +69,24 @@ export function renderLogin(ctx) {
             minlength="12" placeholder="••••••••••••">
           ${mode === "signup" ? '<div class="password-strength" id="pwd-strength" aria-live="polite"></div>' : ""}
         </div>` : "";
-
+ 
     /* ── submit label ───────────────────────────────────────────────── */
     const submitLabel =
       mode === "signup" ? "Create account" :
       mode === "magic"  ? "Send magic link" :
                           "Sign in";
-
-    /* ── magic link (Supabase only) ─────────────────────────────────── */
-    const magicLinkOption = supabaseMode
-      ? `<button type="button" data-mode="magic">Magic link</button>`
-      : "";
-
+ 
     /* ── extra options below form ───────────────────────────────────── */
     const extraSection = isDemoModeEnabled()
       ? `<div class="auth-divider">development</div>
          <button type="button" class="auth-btn" id="btn-demo">Continue in demo mode (local only)</button>`
-      : supabaseMode
-        ? `<div class="auth-divider">passkey setup</div>
-           <button type="button" class="auth-btn" id="btn-register-passkey">Register a passkey (after email sign-in)</button>`
-        : "";
-
+      : "";
+ 
     root.innerHTML = `
       <div class="mesh-bg" aria-hidden="true"></div>
       <div class="auth-shell page-enter">
         <div class="auth-card glass-panel" role="dialog" aria-labelledby="auth-title">
-
+ 
           <div class="brand" style="margin-bottom:1.25rem;">
             <span class="brand-mark">S</span>
             <div>
@@ -109,12 +94,12 @@ export function renderLogin(ctx) {
               <p class="tagline">Secure access to your workspace</p>
             </div>
           </div>
-
+ 
           ${modeBadge}
           <div id="auth-message" hidden></div>
-
+ 
           ${oauthSection}
-
+ 
           <form id="auth-form" novalidate>
             <div class="auth-field">
               <label for="auth-email">Email</label>
@@ -126,19 +111,18 @@ export function renderLogin(ctx) {
               ${submitLabel}
             </button>
           </form>
-
+ 
           <div class="auth-links">
             ${mode === "signin"
-              ? `<button type="button" data-mode="signup">Create account</button>
-                 ${magicLinkOption}`
+              ? `<button type="button" data-mode="signup">Create account</button>`
               : `<button type="button" data-mode="signin">Back to sign in</button>`
             }
           </div>
-
+ 
           ${extraSection}
-
+ 
           <div class="auth-links" style="margin-top:1.5rem;justify-content:center;">
-            <button type="button" data-nav="landing">← Back to home</button>
+            <button type="button" data-nav="landing" style="text-decoration: none !important;">← Back to home</button>
           </div>
         </div>
       </div>
@@ -189,7 +173,11 @@ export function renderLogin(ctx) {
     /* Google */
     root.querySelector("#btn-google")?.addEventListener("click", async () => {
       setLoading(true);
-      showMessage("Redirecting to Google…", "info");
+      if (isAuthConfigured()) {
+        showMessage("Redirecting to Google…", "info");
+      } else {
+        showMessage("");
+      }
       try { await signInWithGoogle(); }
       catch (err) { showMessage(err.message, "error"); setLoading(false); }
     });

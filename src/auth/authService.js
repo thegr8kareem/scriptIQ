@@ -180,19 +180,158 @@ export async function signInWithGoogle() {
     return;
   }
 
-  // Local backend path (mock Google Auth selector)
-  const defaultGoogleEmail = "google-user@university.edu.gh";
-  const userEmail = window.prompt("Mock Google Sign-In — Enter Google Email to select account:", defaultGoogleEmail);
-  if (userEmail === null) {
-    throw new Error("Google Sign-In canceled.");
-  }
-  if (!userEmail.trim()) {
-    throw new Error("A valid email address is required.");
-  }
+  // Local backend path (custom styled Google Account Chooser dialog)
+  return new Promise((resolve, reject) => {
+    const backdrop = document.createElement("div");
+    backdrop.className = "modal-backdrop";
+    backdrop.id = "google-auth-backdrop";
+    backdrop.style.cssText = `
+      position: fixed;
+      inset: 0;
+      z-index: 9999;
+      background: rgba(4, 10, 24, 0.85);
+      backdrop-filter: blur(8px);
+      display: grid;
+      place-items: center;
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      font-family: 'Roboto', 'Segoe UI', Arial, sans-serif;
+    `;
 
-  const data = await callBackend("/api/auth/google", "POST", { email: userEmail.trim() });
-  saveLocalSession(data);
-  return localToSession(data);
+    backdrop.innerHTML = `
+      <div class="google-card" style="
+        background: white;
+        color: #1f1f1f;
+        width: 90%;
+        max-width: 380px;
+        padding: 2.25rem 2rem 2rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.25);
+        display: flex;
+        flex-direction: column;
+        transform: translateY(20px);
+        transition: transform 0.25s ease;
+      ">
+        <div style="display: flex; justify-content: center; margin-bottom: 1rem;">
+          <svg width="74" height="24" viewBox="0 0 74 24" fill="none">
+            <path fill="#EA4335" d="M21.9 12c0-.7-.1-1.4-.2-2h-9.5v3.8h5.5c-.2 1.3-1 2.3-2.1 3l3.2 2.5c1.9-1.8 3.1-4.4 3.1-7.3z"/>
+            <path fill="#4285F4" d="M12.2 21.9c2.7 0 4.9-.9 6.5-2.5l-3.2-2.5c-.9.6-2 .9-3.3.9-2.5 0-4.7-1.7-5.5-4L3.4 16.3c1.7 3.3 5.1 5.6 8.8 5.6z"/>
+            <path fill="#FBBC05" d="M6.7 13.8c-.2-.6-.3-1.2-.3-1.8s.1-1.2.3-1.8L3.4 7.7c-.8 1.6-1.2 3.4-1.2 5.3s.4 3.7 1.2 5.3l3.3-2.5z"/>
+            <path fill="#34A853" d="M12.2 5.6c1.5 0 2.8.5 3.8 1.5l2.9-2.9C17.1 2.5 14.9 1.5 12.2 1.5 8.5 1.5 5.1 3.8 3.4 7.1l3.3 2.5c.8-2.3 3-4 5.5-4z"/>
+            <text x="26" y="17" fill="#5f6368" font-family="system-ui, sans-serif" font-weight="bold" font-size="15">oogle</text>
+          </svg>
+        </div>
+        <h2 style="font-size: 1.3rem; font-weight: 400; text-align: center; margin: 0 0 0.25rem; color: #202124;">Choose an account</h2>
+        <p style="font-size: 0.88rem; text-align: center; margin: 0 0 1.5rem; color: #5f6368;">to continue to <strong style="color: #202124;">ScriptIQ</strong></p>
+        
+        <div style="display: flex; flex-direction: column; border-top: 1px solid #dadce0; border-bottom: 1px solid #dadce0; margin-bottom: 1.5rem;" id="google-account-list">
+          <div class="google-row" data-email="razak@knust.edu.gh" data-name="Razak Kareem" style="display: flex; align-items: center; padding: 0.75rem 0.5rem; cursor: pointer; border-bottom: 1px solid #f1f3f4; gap: 0.75rem;">
+            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e8f0fe; color: #1a73e8; display: grid; place-items: center; font-weight: 700; font-size: 0.9rem;">R</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 0.88rem; font-weight: 500; color: #3c4043;">Razak Kareem</div>
+              <div style="font-size: 0.78rem; color: #5f6368;">razak@knust.edu.gh</div>
+            </div>
+          </div>
+          
+          <div class="google-row" data-email="lecturer@ug.edu.gh" data-name="Test Lecturer" style="display: flex; align-items: center; padding: 0.75rem 0.5rem; cursor: pointer; border-bottom: 1px solid #f1f3f4; gap: 0.75rem;">
+            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #e2fbf5; color: #00b4d8; display: grid; place-items: center; font-weight: 700; font-size: 0.9rem;">T</div>
+            <div style="flex: 1; min-width: 0;">
+              <div style="font-size: 0.88rem; font-weight: 500; color: #3c4043;">Test Lecturer</div>
+              <div style="font-size: 0.78rem; color: #5f6368;">lecturer@ug.edu.gh</div>
+            </div>
+          </div>
+
+          <div id="google-another-btn" style="display: flex; align-items: center; padding: 0.75rem 0.5rem; cursor: pointer; gap: 0.75rem;">
+            <div style="width: 2rem; height: 2rem; border-radius: 50%; background: #f1f3f4; color: #5f6368; display: grid; place-items: center; font-size: 1.1rem;">👤</div>
+            <div style="font-size: 0.88rem; font-weight: 500; color: #1a73e8;">Use another account</div>
+          </div>
+        </div>
+
+        <div id="google-email-input-container" style="display: none; flex-direction: column; gap: 1rem; margin-bottom: 1.5rem;">
+          <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+            <label style="font-size: 0.78rem; font-weight: 600; color: #3c4043;">Email or phone</label>
+            <input type="email" id="google-input-email" placeholder="Enter Google Email" style="font-family: inherit; font-size: 0.92rem; padding: 0.55rem 0.75rem; border: 1px solid #dadce0; border-radius: 4px; outline: none;" value="google-user@university.edu.gh">
+          </div>
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <button type="button" id="google-back-btn" style="background: transparent; border: none; color: #1a73e8; font-size: 0.88rem; cursor: pointer; font-weight: 500;">Back</button>
+            <button type="button" id="google-next-btn" style="background: #1a73e8; border: none; color: white; padding: 0.5rem 1rem; border-radius: 4px; font-size: 0.88rem; cursor: pointer; font-weight: 500;">Next</button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end; font-size: 0.88rem;">
+          <button type="button" id="google-cancel-btn" style="background: transparent; border: none; padding: 0.5rem; cursor: pointer; color: #5f6368; font-weight: 500;">Cancel</button>
+        </div>
+      </div>
+    `;
+
+    document.body.appendChild(backdrop);
+
+    requestAnimationFrame(() => {
+      backdrop.style.opacity = "1";
+      const card = backdrop.querySelector(".google-card");
+      if (card) card.style.transform = "translateY(0)";
+    });
+
+    const cleanup = () => {
+      backdrop.style.opacity = "0";
+      const card = backdrop.querySelector(".google-card");
+      if (card) card.style.transform = "translateY(20px)";
+      setTimeout(() => {
+        backdrop.remove();
+      }, 250);
+    };
+
+    const handleEmail = async (email) => {
+      cleanup();
+      try {
+        const data = await callBackend("/api/auth/google", "POST", { email: email.trim() });
+        saveLocalSession(data);
+        resolve(localToSession(data));
+      } catch (err) {
+        reject(err);
+      }
+    };
+
+    backdrop.querySelectorAll(".google-row").forEach(row => {
+      row.addEventListener("click", () => {
+        handleEmail(row.dataset.email);
+      });
+    });
+
+    const anotherBtn = backdrop.querySelector("#google-another-btn");
+    const accountList = backdrop.querySelector("#google-account-list");
+    const inputContainer = backdrop.querySelector("#google-email-input-container");
+    const inputEmail = backdrop.querySelector("#google-input-email");
+
+    anotherBtn.addEventListener("click", () => {
+      accountList.style.display = "none";
+      inputContainer.style.display = "flex";
+      inputEmail.focus();
+    });
+
+    backdrop.querySelector("#google-back-btn").addEventListener("click", () => {
+      inputContainer.style.display = "none";
+      accountList.style.display = "flex";
+    });
+
+    backdrop.querySelector("#google-next-btn").addEventListener("click", () => {
+      const val = inputEmail.value.trim();
+      if (!val) return;
+      handleEmail(val);
+    });
+
+    inputEmail.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") {
+        const val = inputEmail.value.trim();
+        if (val) handleEmail(val);
+      }
+    });
+
+    backdrop.querySelector("#google-cancel-btn").addEventListener("click", () => {
+      cleanup();
+      reject(new Error("Google Sign-In canceled."));
+    });
+  });
 }
 
 /**

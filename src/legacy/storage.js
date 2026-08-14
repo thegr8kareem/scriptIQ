@@ -23,7 +23,7 @@ ScriptIQ.storage = (function () {
   "use strict";
 
   const DB_NAME = "scriptiq";
-  const DB_VERSION = 1;
+  const DB_VERSION = 3;
 
   let dbPromise = null;
 
@@ -73,35 +73,62 @@ ScriptIQ.storage = (function () {
   // ---------- submissions ----------
 
   function saveSubmission(record) {
-    return withStore("submissions", "readwrite", (s) => s.put(record));
+    const userId = window.ScriptIQ?.currentUser?.id || "anonymous";
+    return withStore("submissions", "readwrite", (s) => s.put({ ...record, userId }));
   }
 
   function getAllSubmissions() {
-    return withStore("submissions", "readonly", (s) => s.getAll());
+    const userId = window.ScriptIQ?.currentUser?.id || "anonymous";
+    return withStore("submissions", "readonly", (s) => s.getAll()).then(
+      (records) => (records || []).filter((r) => r.userId === userId)
+    );
   }
 
   function deleteAllSubmissions() {
-    return withStore("submissions", "readwrite", (s) => s.clear());
+    const userId = window.ScriptIQ?.currentUser?.id || "anonymous";
+    return withStore("submissions", "readwrite", (s) => {
+      s.getAll().onsuccess = (e) => {
+        const records = e.target.result || [];
+        for (const r of records) {
+          if (r.userId === userId) {
+            s.delete(r.id);
+          }
+        }
+      };
+    });
   }
 
   // ---------- comparison history ----------
 
   function logComparison(entry) {
-    return withStore("comparisons", "readwrite", (s) => s.add(entry));
+    const userId = window.ScriptIQ?.currentUser?.id || "anonymous";
+    return withStore("comparisons", "readwrite", (s) => s.add({ ...entry, userId }));
   }
 
   /** Latest `limit` comparisons, newest first. */
   function getComparisons(limit = 50) {
+    const userId = window.ScriptIQ?.currentUser?.id || "anonymous";
     return withStore("comparisons", "readonly", (s) => s.getAll()).then(
       (rows) =>
         (rows || [])
+          .filter((r) => r.userId === userId)
           .sort((a, b) => new Date(b.comparedAt) - new Date(a.comparedAt))
           .slice(0, limit)
     );
   }
 
   function clearComparisons() {
-    return withStore("comparisons", "readwrite", (s) => s.clear());
+    const userId = window.ScriptIQ?.currentUser?.id || "anonymous";
+    return withStore("comparisons", "readwrite", (s) => {
+      s.getAll().onsuccess = (e) => {
+        const rows = e.target.result || [];
+        for (const r of rows) {
+          if (r.userId === userId) {
+            s.delete(r.id);
+          }
+        }
+      };
+    });
   }
 
   return {
