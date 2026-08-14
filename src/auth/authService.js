@@ -164,15 +164,35 @@ export async function getSession() {
 
 /* ── sign-in methods ──────────────────────────────────────────────────── */
 
-/** Google OAuth (Supabase only). */
+/**
+ * Google OAuth.
+ * Tries Supabase first; falls back to mock Google sign-in on local backend.
+ */
 export async function signInWithGoogle() {
-  requireSupabase();
-  // Use the bare origin as the redirect — Supabase appends its own ?code= param.
-  // detectSessionInUrl in the client will exchange the code, then onAuthStateChange
-  // fires and main.js navigates to /app. Do NOT include #/app here — it breaks PKCE.
-  const redirectTo = window.location.origin + window.location.pathname;
-  const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
-  if (error) throw error;
+  // Supabase path
+  if (supabase) {
+    // Use the bare origin as the redirect — Supabase appends its own ?code= param.
+    // detectSessionInUrl in the client will exchange the code, then onAuthStateChange
+    // fires and main.js navigates to /app. Do NOT include #/app here — it breaks PKCE.
+    const redirectTo = window.location.origin + window.location.pathname;
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    if (error) throw error;
+    return;
+  }
+
+  // Local backend path (mock Google Auth selector)
+  const defaultGoogleEmail = "google-user@university.edu.gh";
+  const userEmail = window.prompt("Mock Google Sign-In — Enter Google Email to select account:", defaultGoogleEmail);
+  if (userEmail === null) {
+    throw new Error("Google Sign-In canceled.");
+  }
+  if (!userEmail.trim()) {
+    throw new Error("A valid email address is required.");
+  }
+
+  const data = await callBackend("/api/auth/google", "POST", { email: userEmail.trim() });
+  saveLocalSession(data);
+  return localToSession(data);
 }
 
 /**
@@ -292,6 +312,88 @@ export function isPasskeySupported() {
 /** True if the local Express backend should be used for auth. */
 export function isLocalBackendMode() {
   return !isSupabaseConfigured;
+}
+
+export async function getProfile() {
+  const session = await getSession();
+  if (!session) return null;
+
+  // ① Supabase path
+  if (supabase) {
+    const user = session.user;
+    const emailParts = user.email.split("@")[0];
+    const defaultName = emailParts.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+    return {
+      id: user.id,
+      email: user.email,
+      name: user.user_metadata?.full_name || user.user_metadata?.name || defaultName,
+      avatarUrl: user.user_metadata?.avatar_url || null,
+      createdAt: user.created_at,
+      institution: user.user_metadata?.institution || "Supabase Workspace",
+      accountType: user.user_metadata?.accountType || "Lecturer"
+    };
+  }
+
+  // ② Local backend path
+  const stored = readLocalSession();
+  if (stored?.token) {
+    try {
+      const data = await callBackend("/api/auth/profile");
+      return data.profile;
+    } catch (err) {
+      console.error("Failed to get profile from local backend:", err);
+      const emailParts = session.user.email.split("@")[0];
+      const defaultName = emailParts.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+      return {
+        id: session.user.id,
+        email: session.user.email,
+        name: defaultName,
+        avatarUrl: null,
+        createdAt: session.user.createdAt || new Date().toISOString(),
+        institution: "University of Ghana",
+        accountType: "Lecturer"
+      };
+    }
+  }
+
+  // ③ Demo mode
+  if (session.demo || readDemoSession()) {
+    const emailParts = session.user.email.split("@")[0];
+    const defaultName = emailParts.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+    const demoSess = session.user;
+    return {
+      id: demoSess.id || "demo-user",
+      email: demoSess.email || "demo@scriptiq.local",
+      name: defaultName,
+      avatarUrl: null,
+      createdAt: new Date().toISOString(),
+      institution: "Demo Institution",
+      accountType: "Guest Lecturer"
+    };
+  }
+
+  return null;
+}
+
+export async function updateProfile(profileData) {
+  if (supabase) {
+    const { data, error } = await supabase.auth.updateUser({
+      data: {
+        full_name: profileData.name,
+        institution: profileData.institution,
+        accountType: profileData.accountType
+      }
+    });
+    if (error) throw error;
+    return data;
+  }
+
+  const stored = readLocalSession();
+  if (stored?.token) {
+    return await callBackend("/api/auth/profile", "POST", profileData);
+  }
+
+  throw new Error("Cannot update profile in demo mode.");
 }
 
 export { isBackendReachable };

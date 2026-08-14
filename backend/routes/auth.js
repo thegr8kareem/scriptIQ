@@ -103,6 +103,40 @@ router.post("/register", async (req, res, next) => {
   }
 });
 
+/* ── POST /google ─────────────────────────────────────────────────────── */
+router.post("/google", async (req, res, next) => {
+  try {
+    const { email } = req.body || {};
+
+    if (!email || typeof email !== "string" || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
+      return res.status(422).json({ error: "A valid Google email address is required." });
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    await db.read();
+    
+    // Find or create user
+    let user = db.data.users.find((u) => u.email === normalizedEmail);
+    if (!user) {
+      const emailParts = normalizedEmail.split("@")[0];
+      const defaultName = emailParts.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+      user = {
+        id: randomUUID(),
+        email: normalizedEmail,
+        name: defaultName,
+        createdAt: new Date().toISOString(),
+      };
+      db.data.users.push(user);
+      await db.write();
+    }
+
+    const token = signToken(user);
+    res.json({ token, user: sanitize(user) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 /* ── POST /login ──────────────────────────────────────────────────────── */
 router.post("/login", async (req, res, next) => {
   try {
@@ -151,6 +185,63 @@ router.get("/me", requireAuth, async (req, res, next) => {
       return res.status(404).json({ error: "User not found." });
     }
     res.json({ user: sanitize(user) });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ── GET /profile ─────────────────────────────────────────────────────── */
+router.get("/profile", requireAuth, async (req, res, next) => {
+  try {
+    await db.read();
+    const user = db.data.users.find((u) => u.id === req.user.id);
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    const emailParts = user.email.split("@")[0];
+    const defaultName = emailParts.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
+    res.json({
+      profile: {
+        id: user.id,
+        email: user.email,
+        name: user.name || defaultName,
+        avatarUrl: user.avatarUrl || null,
+        createdAt: user.createdAt,
+        institution: user.institution || "University of Ghana",
+        accountType: user.accountType || "Lecturer"
+      }
+    });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ── POST /profile ────────────────────────────────────────────────────── */
+router.post("/profile", requireAuth, async (req, res, next) => {
+  try {
+    const { name, institution, accountType } = req.body || {};
+    await db.read();
+    const userIndex = db.data.users.findIndex((u) => u.id === req.user.id);
+    if (userIndex === -1) {
+      return res.status(404).json({ error: "User not found." });
+    }
+    if (name !== undefined) db.data.users[userIndex].name = name;
+    if (institution !== undefined) db.data.users[userIndex].institution = institution;
+    if (accountType !== undefined) db.data.users[userIndex].accountType = accountType;
+    await db.write();
+    const user = db.data.users[userIndex];
+    res.json({
+      message: "Profile updated successfully.",
+      profile: {
+        id: user.id,
+        email: user.email,
+        name: user.name,
+        avatarUrl: user.avatarUrl || null,
+        createdAt: user.createdAt,
+        institution: user.institution || "University of Ghana",
+        accountType: user.accountType || "Lecturer"
+      }
+    });
   } catch (err) {
     next(err);
   }

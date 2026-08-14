@@ -43,23 +43,28 @@ export function renderLogin(ctx) {
         ${modeLabel}
       </div>`;
 
-    /* ── OAuth / passkey buttons (Supabase only) ────────────────────── */
-    const oauthSection = supabaseMode
-      ? `
-        <button type="button" class="auth-btn" id="btn-google">
-          <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-            <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-5.514 0-10-4.486-10-10s4.486-10 10-10c2.521 0 4.822.938 6.607 2.478l6.086-6.086C33.436 9.247 28.956 7 24 7 13.507 7 5 15.507 5 26s8.507 19 19 19 19-8.507 19-19c0-1.341-.138-2.65-.389-3.917z"/>
-            <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 13 24 13c2.521 0 4.822.938 6.607 2.478l6.086-6.086C33.436 9.247 28.956 7 24 7 16.318 7 9.656 11.337 6.306 14.691z"/>
-            <path fill="#4CAF50" d="M24 45c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 36.091 26.715 37 24 37c-5.099 0-9.444-3.277-11.012-7.846l-6.52 5.02C9.505 41.556 16.227 45 24 45z"/>
-            <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.022 35.026 45 30.638 45 26c0-1.341-.138-2.65-.389-3.917z"/>
-          </svg>
-          Continue with Google
-        </button>
-        <button type="button" class="auth-btn" id="btn-passkey" ${!isPasskeySupported() ? "disabled title='Requires HTTPS and a compatible browser'" : ""}>
+    /* ── OAuth / passkey buttons ────────────────────────────────────── */
+    const googleButton = `
+      <button type="button" class="auth-btn" id="btn-google">
+        <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
+          <path fill="#FFC107" d="M43.611 20.083H42V20H24v8h11.303C33.654 32.657 29.083 36 24 36c-5.514 0-10-4.486-10-10s4.486-10 10-10c2.521 0 4.822.938 6.607 2.478l6.086-6.086C33.436 9.247 28.956 7 24 7 13.507 7 5 15.507 5 26s8.507 19 19 19 19-8.507 19-19c0-1.341-.138-2.65-.389-3.917z"/>
+          <path fill="#FF3D00" d="M6.306 14.691l6.571 4.819C14.655 16.108 18.961 13 24 13c2.521 0 4.822.938 6.607 2.478l6.086-6.086C33.436 9.247 28.956 7 24 7 16.318 7 9.656 11.337 6.306 14.691z"/>
+          <path fill="#4CAF50" d="M24 45c5.166 0 9.86-1.977 13.409-5.192l-6.19-5.238C29.211 36.091 26.715 37 24 37c-5.099 0-9.444-3.277-11.012-7.846l-6.52 5.02C9.505 41.556 16.227 45 24 45z"/>
+          <path fill="#1976D2" d="M43.611 20.083H42V20H24v8h11.303c-.792 2.237-2.231 4.166-4.087 5.571l6.19 5.238C42.022 35.026 45 30.638 45 26c0-1.341-.138-2.65-.389-3.917z"/>
+        </svg>
+        Continue with Google
+      </button>`;
+
+    const passkeyButton = supabaseMode
+      ? `<button type="button" class="auth-btn" id="btn-passkey" ${!isPasskeySupported() ? "disabled title='Requires HTTPS and a compatible browser'" : ""}>
           🔐 Sign in with passkey
-        </button>
-        <div class="auth-divider">or email</div>`
-      : `<div class="auth-divider" style="margin-bottom:1rem;">sign in with your account</div>`;
+        </button>`
+      : "";
+
+    const oauthSection = `
+      ${googleButton}
+      ${passkeyButton}
+      <div class="auth-divider">or email</div>`;
 
     /* ── password field ─────────────────────────────────────────────── */
     const passwordField = mode !== "magic"

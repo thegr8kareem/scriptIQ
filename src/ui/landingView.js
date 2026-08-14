@@ -114,8 +114,7 @@ export function renderLanding(ctx) {
           </div>
         </div>
         <div class="header-actions">
-          <button type="button" class="btn-ghost-dark" data-nav="login">Sign in</button>
-          <button type="button" class="btn-glow"       data-nav="app">Launch app</button>
+          <button type="button" class="btn-glow" data-nav="login">Sign in</button>
         </div>
       </nav>
 

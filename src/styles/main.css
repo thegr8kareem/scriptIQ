@@ -75,16 +75,22 @@ body {
   background: linear-gradient(135deg, var(--accent), var(--accent-2));
   color: #041018;
   font-weight: 600;
-  border: none;
+  border: 1px solid transparent;
   border-radius: 999px;
   padding: 0.65rem 1.4rem;
   cursor: pointer;
-  transition: transform 0.2s, box-shadow 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, color 0.2s;
   box-shadow: var(--glow);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-size: 0.95rem;
+  line-height: 1.2;
 }
 
 .btn-glow:hover {
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 0 32px rgba(0, 245, 212, 0.45);
 }
 
@@ -95,12 +101,20 @@ body {
   border-radius: 999px;
   padding: 0.65rem 1.4rem;
   cursor: pointer;
-  transition: border-color 0.2s, color 0.2s;
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s, color 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  vertical-align: middle;
+  font-size: 0.95rem;
+  line-height: 1.2;
 }
 
 .btn-ghost-dark:hover {
   border-color: var(--accent);
   color: var(--accent);
+  transform: translateY(-2px);
+  box-shadow: 0 5px 15px rgba(0, 245, 212, 0.15);
 }
 
 .text-gradient {
@@ -117,6 +131,10 @@ body {
   padding: 1.25rem 1.5rem;
   max-width: 1200px;
   margin: 0 auto;
+}
+
+.landing-nav .brand {
+  margin: 0;
 }
 
 .landing-hero {
@@ -423,9 +441,14 @@ body {
 .panel-heading-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   flex-wrap: wrap;
   gap: 0.5rem;
+}
+
+.panel-heading-row h2 {
+  margin-bottom: 0;
+  align-self: center;
 }
 
 .drop-zone {
@@ -1328,6 +1351,13 @@ code, .tagline, .hero-badge, .stat-label, .panel h2 { font-family: "DM Mono", mo
   border: 1px solid var(--border);
   border-radius: 999px;
   background: rgba(10,16,36,.6);
+  cursor: pointer;
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.user-pill:hover {
+  border-color: var(--accent);
+  background: rgba(10,16,36,.8);
 }
 
 .user-avatar {
@@ -1402,4 +1432,157 @@ code, .tagline, .hero-badge, .stat-label, .panel h2 { font-family: "DM Mono", mo
   margin-bottom: 0.35rem;
   color: var(--text-main);
 }
+
+/* ── PROFILE MODAL ──────────────────────────────────────────────────── */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 2000;
+  background: rgba(4, 10, 24, 0.75);
+  backdrop-filter: blur(8px);
+  display: grid;
+  place-items: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+
+.modal-backdrop.show {
+  opacity: 1;
+  pointer-events: all;
+}
+
+.profile-card {
+  width: 90%;
+  max-width: 480px;
+  padding: 2rem;
+  border-radius: var(--radius);
+  position: relative;
+  transform: translateY(20px);
+  transition: transform 0.3s ease;
+  border: 1px solid var(--panel-border);
+}
+
+.modal-backdrop.show .profile-card {
+  transform: translateY(0);
+}
+
+.profile-header {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  margin-bottom: 1.75rem;
+  position: relative;
+}
+
+.profile-avatar-large {
+  width: 4rem;
+  height: 4rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--accent), var(--accent-2));
+  display: grid;
+  place-items: center;
+  color: #041018;
+  font-weight: 800;
+  font-size: 1.6rem;
+  flex-shrink: 0;
+  box-shadow: 0 0 20px rgba(83, 241, 207, 0.3);
+}
+
+.profile-meta-large {
+  flex: 1;
+}
+
+.profile-meta-large h3 {
+  margin: 0;
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+
+.profile-meta-large p {
+  margin: 0.25rem 0 0;
+  font-size: 0.9rem;
+  color: var(--muted);
+}
+
+.btn-close {
+  position: absolute;
+  top: -0.5rem;
+  right: -0.5rem;
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.75rem;
+  cursor: pointer;
+  line-height: 1;
+  padding: 0.25rem;
+  transition: color 0.2s;
+}
+
+.btn-close:hover {
+  color: var(--accent);
+}
+
+.profile-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  margin-bottom: 2rem;
+}
+
+.profile-info-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.profile-info-group label {
+  font-size: 0.78rem;
+  font-family: "DM Mono", monospace;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--muted);
+}
+
+.profile-info-group input,
+.profile-info-group select {
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(10, 16, 36, 0.4);
+  color: var(--ink);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.profile-info-group input:focus,
+.profile-info-group select:focus {
+  border-color: var(--accent);
+}
+
+.profile-info-group input.profile-input-readonly {
+  background: rgba(10, 16, 36, 0.15);
+  border-color: rgba(136, 180, 255, 0.05);
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.profile-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+}
+
+#profile-status-message {
+  margin-top: 1rem;
+  font-size: 0.85rem;
+  text-align: center;
+  min-height: 1.2em;
+}
+.profile-msg-success { color: var(--accent); }
+.profile-msg-error { color: #ff4d6d; }
 

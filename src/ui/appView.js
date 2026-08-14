@@ -4,7 +4,7 @@
  * Loads legacy modules (parser, similarity, graph, etc.) and mounts the
  * original upload → compare → graph → history UI behind the auth gate.
  */
-import { getSession, signOut } from "../auth/authService.js";
+import { getSession, signOut, getProfile, updateProfile } from "../auth/authService.js";
 import { fetchScriptAnalysis } from "../ai/aiService.js";
 import { fadeInPage, revealAppPanels } from "./animations.js";
 
@@ -43,7 +43,10 @@ const APP_HTML = `
 
     <main class="app-main">
       <section class="panel reveal-ready" id="upload-panel">
-        <h2>1 · Upload submissions</h2>
+        <div class="panel-heading-row" style="margin-bottom: 1.25rem;">
+          <h2>1 · Upload submissions</h2>
+          <button id="btn-back-home" class="btn btn-ghost" type="button">← Back to Home</button>
+        </div>
         <div id="drop-zone" class="drop-zone" tabindex="0" role="button"
              aria-label="Upload files by clicking or dragging them here">
           <div class="drop-zone-inner">
@@ -211,6 +214,58 @@ const APP_HTML = `
     <footer class="app-footer">
       <p>ScriptIQ runs entirely in your browser — submissions never leave this machine.</p>
     </footer>
+
+    <!-- PROFILE MODAL -->
+    <div id="profile-modal" class="modal-backdrop" hidden>
+      <div class="profile-card glass-panel" role="dialog" aria-labelledby="profile-title">
+        <div class="profile-header">
+          <div class="profile-avatar-large" id="profile-avatar-large">?</div>
+          <div class="profile-meta-large">
+            <h3 id="profile-title">User Profile</h3>
+            <p id="profile-email-label" class="muted">email@example.com</p>
+          </div>
+          <button type="button" class="btn-close" id="profile-modal-close" aria-label="Close profile">×</button>
+        </div>
+        
+        <div class="profile-body">
+          <div class="profile-info-group">
+            <label>Account ID</label>
+            <input type="text" id="profile-uid" readonly class="profile-input-readonly">
+          </div>
+          
+          <div class="profile-info-group">
+            <label>Full Name</label>
+            <input type="text" id="profile-input-name" placeholder="Enter your name">
+          </div>
+
+          <div class="profile-info-group">
+            <label>Institution</label>
+            <input type="text" id="profile-input-institution" placeholder="University of Ghana">
+          </div>
+
+          <div class="profile-info-group">
+            <label>Account Type</label>
+            <select id="profile-input-role">
+              <option value="Lecturer">Lecturer</option>
+              <option value="Teaching Assistant">Teaching Assistant</option>
+              <option value="Administrator">Administrator</option>
+            </select>
+          </div>
+
+          <div class="profile-info-group">
+            <label>Member Since</label>
+            <input type="text" id="profile-created-at" readonly class="profile-input-readonly">
+          </div>
+        </div>
+
+        <div class="profile-actions">
+          <button type="button" class="btn btn-ghost" id="profile-btn-cancel">Close</button>
+          <button type="button" class="btn btn-primary" id="profile-btn-save">Save Changes</button>
+        </div>
+        
+        <div id="profile-status-message" aria-live="polite"></div>
+      </div>
+    </div>
   </div>
 `;
 
@@ -243,6 +298,144 @@ export async function renderApp(ctx) {
   root.querySelector("#btn-sign-out")?.addEventListener("click", async () => {
     await signOut();
     ctx.navigate("/login");
+  });
+
+  root.querySelector("#btn-back-home")?.addEventListener("click", () => {
+    ctx.navigate("/");
+  });
+
+  // Profile modal logic
+  const userPill = root.querySelector("#user-pill");
+  const profileModal = root.querySelector("#profile-modal");
+  const profileClose = root.querySelector("#profile-modal-close");
+  const profileCancel = root.querySelector("#profile-btn-cancel");
+  const profileSave = root.querySelector("#profile-btn-save");
+  const profileStatus = root.querySelector("#profile-status-message");
+
+  const openProfileModal = async () => {
+    if (!profileModal) return;
+    if (profileStatus) {
+      profileStatus.textContent = "";
+      profileStatus.className = "";
+    }
+    try {
+      const profile = await getProfile();
+      if (profile) {
+        const nameInput = root.querySelector("#profile-input-name");
+        const instInput = root.querySelector("#profile-input-institution");
+        const roleInput = root.querySelector("#profile-input-role");
+        const uidInput = root.querySelector("#profile-uid");
+        const createdInput = root.querySelector("#profile-created-at");
+        const emailLabel = root.querySelector("#profile-email-label");
+        const titleEl = root.querySelector("#profile-title");
+        const avatarLarge = root.querySelector("#profile-avatar-large");
+
+        if (nameInput) nameInput.value = profile.name || "";
+        if (instInput) instInput.value = profile.institution || "University of Ghana";
+        if (roleInput) roleInput.value = profile.accountType || "Lecturer";
+        if (uidInput) uidInput.value = profile.id || "";
+        if (emailLabel) emailLabel.textContent = profile.email || "";
+        if (titleEl) titleEl.textContent = profile.name || "User Profile";
+        
+        if (createdInput) {
+          const dateStr = profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "N/A";
+          createdInput.value = dateStr;
+        }
+
+        if (avatarLarge) {
+          const initials = (profile.name || profile.email)
+            .split(" ")
+            .map((p) => p[0]?.toUpperCase() || "")
+            .join("")
+            .slice(0, 2) || "U";
+          avatarLarge.textContent = initials;
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load profile:", err);
+    }
+    profileModal.hidden = false;
+    setTimeout(() => profileModal.classList.add("show"), 10);
+  };
+
+  const closeProfileModal = () => {
+    if (!profileModal) return;
+    profileModal.classList.remove("show");
+    setTimeout(() => { profileModal.hidden = true; }, 300);
+  };
+
+  userPill?.addEventListener("click", openProfileModal);
+  profileClose?.addEventListener("click", closeProfileModal);
+  profileCancel?.addEventListener("click", closeProfileModal);
+  profileModal?.addEventListener("click", (e) => {
+    if (e.target === profileModal) {
+      closeProfileModal();
+    }
+  });
+
+  profileSave?.addEventListener("click", async () => {
+    const nameInput = root.querySelector("#profile-input-name");
+    const instInput = root.querySelector("#profile-input-institution");
+    const roleInput = root.querySelector("#profile-input-role");
+
+    const name = nameInput?.value?.trim();
+    const institution = instInput?.value?.trim();
+    const accountType = roleInput?.value;
+
+    if (!name) {
+      if (profileStatus) {
+        profileStatus.textContent = "Name cannot be empty.";
+        profileStatus.className = "profile-msg-error";
+      }
+      return;
+    }
+
+    if (profileSave) {
+      profileSave.disabled = true;
+      profileSave.textContent = "Saving...";
+    }
+
+    try {
+      await updateProfile({ name, institution, accountType });
+      
+      const avatarEl = root.querySelector("#user-avatar");
+      if (avatarEl) {
+        const initials = name
+          .split(" ")
+          .map((p) => p[0]?.toUpperCase() || "")
+          .join("")
+          .slice(0, 2) || "U";
+        avatarEl.textContent = initials;
+      }
+      
+      const titleEl = root.querySelector("#profile-title");
+      const avatarLarge = root.querySelector("#profile-avatar-large");
+      if (titleEl) titleEl.textContent = name;
+      if (avatarLarge) {
+        const initials = name
+          .split(" ")
+          .map((p) => p[0]?.toUpperCase() || "")
+          .join("")
+          .slice(0, 2) || "U";
+        avatarLarge.textContent = initials;
+      }
+
+      if (profileStatus) {
+        profileStatus.textContent = "Profile updated successfully!";
+        profileStatus.className = "profile-msg-success";
+      }
+      setTimeout(closeProfileModal, 1000);
+    } catch (err) {
+      if (profileStatus) {
+        profileStatus.textContent = err.message || "Failed to update profile.";
+        profileStatus.className = "profile-msg-error";
+      }
+    } finally {
+      if (profileSave) {
+        profileSave.disabled = false;
+        profileSave.textContent = "Save Changes";
+      }
+    }
   });
 
   // Export report button & AI insights panel update — shown after a comparison runs
