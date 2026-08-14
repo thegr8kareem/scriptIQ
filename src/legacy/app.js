@@ -849,6 +849,14 @@ export function initScriptIQApp() {
     // Populate Flagged Similarity List Table
     const graphPairsBody = document.getElementById("graph-pairs-body");
     if (graphPairsBody) {
+      const cleanStudentName = (filename) => {
+        if (!filename) return "Unknown Student";
+        let base = filename.replace(/\.[^/.]+$/, ""); // strip extension
+        base = base.replace(/[_-]/g, " ").replace(/%20/g, " "); // replace symbols
+        base = base.trim();
+        return base.split(/\s+/).map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+      };
+
       const threshold = Number(thresholdSlider.value) / 100;
       const flaggedLinks = currentLinks.filter(l => l.score >= threshold);
       flaggedLinks.sort((a, b) => b.score - a.score);
@@ -862,13 +870,17 @@ export function initScriptIQApp() {
           if (!docA || !docB) return "";
           const scorePercent = Math.round(link.score * 100);
           
-          let color = "var(--ink)";
+          let color = "var(--success)";
           if (scorePercent >= standards.highLimit) color = "var(--danger)";
           else if (scorePercent >= standards.lowLimit) color = "#fbbf24";
           
+          const nameA = cleanStudentName(docA.name);
+          const nameB = cleanStudentName(docB.name);
+
           return `<tr>
             <td style="word-break: break-all; padding: 0.65rem 0.25rem;">
-              <div style="font-weight: 600; color: var(--ink);">${escapeHtml(docA.name)} ↔ ${escapeHtml(docB.name)}</div>
+              <div style="font-weight: 600; color: var(--ink);">${escapeHtml(nameA)} ↔ ${escapeHtml(nameB)}</div>
+              <div class="muted" style="font-size: 0.7rem; margin-top: 0.15rem; font-family: monospace;">(${escapeHtml(docA.name)} vs ${escapeHtml(docB.name)})</div>
               <div style="display: flex; gap: 0.4rem; margin-top: 0.35rem; align-items: center; font-size: 0.72rem;">
                 <span class="muted">Export:</span>
                 <button class="btn-export-pdf" data-a="${link.source}" data-b="${link.target}" type="button" style="background: none; border: none; padding: 0; color: var(--accent); cursor: pointer; text-decoration: underline;">PDF</button>

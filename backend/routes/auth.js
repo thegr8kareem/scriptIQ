@@ -205,6 +205,7 @@ router.get("/profile", requireAuth, async (req, res, next) => {
         id: user.id,
         email: user.email,
         name: user.name || defaultName,
+        username: user.username || emailParts,
         avatarUrl: user.avatarUrl || null,
         createdAt: user.createdAt,
         institution: user.institution || "University of Ghana",
@@ -219,23 +220,26 @@ router.get("/profile", requireAuth, async (req, res, next) => {
 /* ── POST /profile ────────────────────────────────────────────────────── */
 router.post("/profile", requireAuth, async (req, res, next) => {
   try {
-    const { name, institution, accountType } = req.body || {};
+    const { name, username, institution, accountType } = req.body || {};
     await db.read();
     const userIndex = db.data.users.findIndex((u) => u.id === req.user.id);
     if (userIndex === -1) {
       return res.status(404).json({ error: "User not found." });
     }
     if (name !== undefined) db.data.users[userIndex].name = name;
+    if (username !== undefined) db.data.users[userIndex].username = username;
     if (institution !== undefined) db.data.users[userIndex].institution = institution;
     if (accountType !== undefined) db.data.users[userIndex].accountType = accountType;
     await db.write();
     const user = db.data.users[userIndex];
+    const emailParts = user.email.split("@")[0];
     res.json({
       message: "Profile updated successfully.",
       profile: {
         id: user.id,
         email: user.email,
         name: user.name,
+        username: user.username || emailParts,
         avatarUrl: user.avatarUrl || null,
         createdAt: user.createdAt,
         institution: user.institution || "University of Ghana",

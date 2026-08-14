@@ -23,12 +23,18 @@ import {
   getSession,
 } from "../auth/authService.js";
 import { animateAuthCard } from "./animations.js";
+import { initThemeToggle } from "./theme.js";
 
 export function renderLogin(ctx) {
   const root = document.getElementById("app");
+  let cleanupTheme = null;
   let mode = "signin"; // signin | signup | magic
 
   function render() {
+    if (cleanupTheme) {
+      cleanupTheme();
+      cleanupTheme = null;
+    }
     const backendMode = isLocalBackendMode();
     const supabaseMode = isAuthConfigured();
 
@@ -87,12 +93,17 @@ export function renderLogin(ctx) {
       <div class="auth-shell page-enter">
         <div class="auth-card glass-panel" role="dialog" aria-labelledby="auth-title">
  
-          <div class="brand" style="margin-bottom:1.25rem;">
-            <span class="brand-mark">S</span>
-            <div>
-              <h1 id="auth-title" style="font-size:1.15rem;margin:0;">ScriptIQ</h1>
-              <p class="tagline">Secure access to your workspace</p>
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+            <div class="brand" style="margin:0;">
+              <span class="brand-mark">S</span>
+              <div>
+                <h1 id="auth-title" style="font-size:1.15rem;margin:0;">ScriptIQ</h1>
+                <p class="tagline">Secure access to your workspace</p>
+              </div>
             </div>
+            <button type="button" class="btn-icon" id="theme-toggle-btn" title="Toggle Light/Dark Mode" style="font-size:1.1rem; padding:0.4rem 0.6rem; width:2.5rem; height:2.5rem;">
+              🌙
+            </button>
           </div>
  
           ${modeBadge}
@@ -130,6 +141,7 @@ export function renderLogin(ctx) {
 
     animateAuthCard(root.querySelector(".auth-card"));
     bindEvents();
+    cleanupTheme = initThemeToggle(root);
   }
 
   /* ── helpers ──────────────────────────────────────────────────────── */
@@ -260,5 +272,9 @@ export function renderLogin(ctx) {
     else render();
   });
 
-  return () => {};
+  return () => {
+    if (cleanupTheme) {
+      cleanupTheme();
+    }
+  };
 }

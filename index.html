@@ -5,6 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="ScriptIQ — browser-based plagiarism detection for lecturers. Submissions stay on your machine.">
   <title>ScriptIQ — Plagiarism Detection</title>
+  <script>
+    (function() {
+      const theme = localStorage.getItem("theme") || "dark";
+      document.documentElement.setAttribute("data-theme", theme);
+    })();
+  </script>
   <!--
     CDN libraries used by the legacy parsing / graph engine.
     Loaded before the Vite bundle so window.pdfjsLib, JSZip, and d3 exist

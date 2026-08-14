@@ -14,6 +14,7 @@
  */
 import { getSession } from "../auth/authService.js";
 import { animateHero, animateFeatureCards, animateStats, fadeInPage } from "./animations.js";
+import { initThemeToggle } from "./theme.js";
 
 const FEATURES = [
   {
@@ -113,7 +114,10 @@ export function renderLanding(ctx) {
             <p class="tagline">Plagiarism detection for lecturers</p>
           </div>
         </div>
-        <div class="header-actions">
+        <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
+          <button type="button" class="btn-icon" id="theme-toggle-btn" title="Toggle Light/Dark Mode" style="font-size:1.1rem; padding:0.4rem 0.6rem; width:2.5rem; height:2.5rem;">
+            🌙
+          </button>
           <button type="button" class="btn-glow" data-nav="login">Sign in</button>
         </div>
       </nav>
@@ -132,7 +136,6 @@ export function renderLanding(ctx) {
           Zero uploads. Zero fees. Zero compromise on privacy.
         </p>
         <div class="hero-actions">
-          <button type="button" class="btn-glow"       data-nav="app">Get started — it's free</button>
           <button type="button" class="btn-ghost-dark" data-nav="login">Sign in securely</button>
         </div>
       </section>
@@ -273,6 +276,7 @@ export function renderLanding(ctx) {
   const cleanupCards = animateFeatureCards(root);
   animateStats(root);
   animateHowItWorks(root);
+  const cleanupTheme = initThemeToggle(root);
 
   async function onNavClick(e) {
     const btn = e.target.closest("[data-nav]");
@@ -299,6 +303,7 @@ export function renderLanding(ctx) {
   return () => {
     root.removeEventListener("click", onNavClick);
     cleanupCards();
+    cleanupTheme();
   };
 }
 

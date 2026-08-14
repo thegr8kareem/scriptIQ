@@ -7,6 +7,7 @@
 import { getSession, signOut, getProfile, updateProfile } from "../auth/authService.js";
 import { fetchScriptAnalysis } from "../ai/aiService.js";
 import { fadeInPage, revealAppPanels } from "./animations.js";
+import { initThemeToggle } from "./theme.js";
 
 /** Tracks whether legacy engine modules have been imported. */
 let modulesLoaded = false;
@@ -25,11 +26,14 @@ const APP_HTML = `
           <h1>ScriptIQ</h1>
           <p class="tagline">Plagiarism detection workspace</p>
         </div>
-        <div class="header-actions">
-          <div class="user-pill" id="user-pill">
+        <div class="header-actions" style="display:flex; align-items:center; gap:0.75rem;">
+          <div class="user-pill" id="user-pill" title="Profile Settings" style="cursor:pointer;">
             <span class="user-avatar" id="user-avatar">?</span>
             <span class="user-chip" id="user-email" title="Signed-in user"></span>
           </div>
+          <button type="button" class="btn btn-icon" id="theme-toggle-btn" title="Toggle Light/Dark Mode" style="font-size:1.1rem; padding:0.4rem 0.6rem; width:2.2rem; height:2.2rem;">
+            🌙
+          </button>
           <button type="button" class="btn btn-export" id="btn-export" title="Export comparison report" hidden>
             ↓ Export report
           </button>
@@ -77,7 +81,7 @@ const APP_HTML = `
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-top: 1rem;">
           <div class="glass-panel" style="padding: 1.25rem;">
             <label style="display: block; font-size: 0.78rem; font-family: 'DM Mono', monospace; text-transform: uppercase; color: var(--accent); margin-bottom: 0.5rem; letter-spacing: 0.05em;">Select Institution Standard</label>
-            <select id="standards-institution" class="select-glow" style="width: 100%; padding: 0.55rem; border-radius: 8px; background: rgba(10, 16, 36, 0.6); color: var(--ink); border: 1px solid var(--panel-border); outline: none;">
+            <select id="standards-institution" class="select-glow" style="width: 100%; padding: 0.55rem; border-radius: 8px; color: var(--ink); border: 1px solid var(--panel-border); outline: none;">
               <option value="knust">KNUST (Kwame Nkrumah Univ.)</option>
               <option value="ug">University of Ghana (UG)</option>
               <option value="ashesi">Ashesi University</option>
@@ -134,7 +138,7 @@ const APP_HTML = `
         <div class="graph-layout" style="display: flex; gap: 1.5rem; flex-wrap: wrap; margin-top: 1.25rem;">
           <div style="flex: 1.8; min-width: 320px;">
             <p id="graph-info" class="muted" style="margin-bottom: 0.5rem; font-size: 0.85rem;"></p>
-            <div class="glass-panel" style="background: rgba(10, 16, 36, 0.4); border-radius: 12px; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--panel-border);">
+            <div class="glass-panel" style="border-radius: 12px; overflow: hidden; display: grid; place-items: center; border: 1px solid var(--panel-border);">
               <svg id="graph-svg" role="img" aria-label="Similarity network graph of the uploaded batch" style="max-height: 380px; width: 100%;"></svg>
             </div>
             <div class="legend graph-legend" style="margin-top: 0.75rem; font-size: 0.78rem;">
@@ -149,9 +153,24 @@ const APP_HTML = `
             <h3 style="margin-top: 0; font-size: 1rem; display: flex; align-items: center; gap: 0.5rem; color: var(--ink);">
               📋 Flagged Similarity List
             </h3>
-            <p style="font-size: 0.8rem; color: var(--muted); margin: 0 0 1rem; line-height: 1.4;">
+            <p style="font-size: 0.8rem; color: var(--muted); margin: 0 0 0.75rem; line-height: 1.4;">
               Tabular view of all pairs exceeding your active plagiarism thresholds.
             </p>
+            <!-- Risk Level Color Legend -->
+            <div class="color-legend" style="display: flex; gap: 0.5rem; flex-direction: column; margin-bottom: 1rem; padding: 0.6rem 0.75rem; background: rgba(255, 255, 255, 0.03); border-radius: 8px; border: 1px solid var(--panel-border); font-size: 0.75rem; line-height: 1.4;">
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--danger); display: inline-block; flex-shrink: 0;"></span>
+                <span><strong style="color: var(--danger);">Red (High Risk):</strong> Plagiarism warning index exceeded.</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: #fbbf24; display: inline-block; flex-shrink: 0;"></span>
+                <span><strong style="color: #fbbf24;">Amber (Medium Risk):</strong> Moderate similarity; requires manual review.</span>
+              </div>
+              <div style="display: flex; align-items: center; gap: 0.4rem;">
+                <span style="width: 8px; height: 8px; border-radius: 50%; background: var(--success); display: inline-block; flex-shrink: 0;"></span>
+                <span><strong style="color: var(--success);">Green (Low Risk):</strong> Standard matching (e.g. citations); acceptable.</span>
+              </div>
+            </div>
             <div style="flex: 1; overflow-y: auto; max-height: 350px;">
               <table class="history-table" style="width: 100%; font-size: 0.8rem;" id="graph-pairs-table">
                 <thead>
@@ -273,6 +292,29 @@ const APP_HTML = `
             </p>
           </div>
 
+          <!-- Color Highlights Explanations Key -->
+          <div class="glass-panel" style="padding: 1rem; margin-top: 1.25rem; font-size: 0.8rem; line-height: 1.45; border-color: var(--panel-border);">
+            <strong style="color: var(--ink); display: block; font-size: 0.85rem; margin-bottom: 0.5rem; text-transform: uppercase; letter-spacing: 0.05em; font-family: 'DM Mono', monospace;">💡 What do the highlight colors mean?</strong>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem;">
+              <div>
+                <span style="font-weight: 600; color: var(--accent); display: block; margin-bottom: 0.25rem;">Shared Passages highlights:</span>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; color: var(--muted);">
+                  <div><mark class="hl-weak" style="padding: 0 4px; border-radius: 4px; font-weight: 500;">Yellow (3-4 words)</mark>: Weak matches (common phrasing or normal citations).</div>
+                  <div><mark class="hl-medium" style="padding: 0 4px; border-radius: 4px; font-weight: 500;">Orange (5-7 words)</mark>: Moderate matches (possible copying or close paraphrasing).</div>
+                  <div><mark class="hl-strong" style="padding: 0 4px; border-radius: 4px; font-weight: 500;">Red (8+ words)</mark>: High match (direct copy-pasting of long text blocks).</div>
+                </div>
+              </div>
+              <div>
+                <span style="font-weight: 600; color: var(--accent-2); display: block; margin-bottom: 0.25rem;">Text Diff highlights:</span>
+                <div style="display: flex; flex-direction: column; gap: 0.35rem; color: var(--muted);">
+                  <div><mark class="df-del" style="padding: 0 4px; border-radius: 4px; font-weight: 500; text-decoration: none;">Red Strikeout</mark>: Text present in the left document, but deleted in the right document.</div>
+                  <div><mark class="df-ins" style="padding: 0 4px; border-radius: 4px; font-weight: 500;">Green Highlight</mark>: New text inserted only in the right document.</div>
+                  <div><mark class="df-mod" style="padding: 0 4px; border-radius: 4px; font-weight: 500;">Amber Highlight</mark>: Replaced or paraphrased words modified in place.</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="view-toggle" role="tablist">
             <button class="tab active" data-view="matches" type="button">Shared passages</button>
             <button class="tab" data-view="diff" type="button">Text diff</button>
@@ -384,6 +426,11 @@ const APP_HTML = `
           </div>
 
           <div class="profile-info-group">
+            <label>Username</label>
+            <input type="text" id="profile-input-username" placeholder="Enter your username">
+          </div>
+
+          <div class="profile-info-group">
             <label>Institution</label>
             <input type="text" id="profile-input-institution" placeholder="University of Ghana">
           </div>
@@ -430,15 +477,31 @@ export async function renderApp(ctx) {
   root.innerHTML = APP_HTML;
 
   const email = session.user?.email || "Signed in";
+  const emailParts = email.split("@")[0];
   const emailEl = root.querySelector("#user-email");
-  if (emailEl) emailEl.textContent = email;
+  if (emailEl) emailEl.textContent = emailParts;
 
   // User avatar — initials from email or name
   const avatarEl = root.querySelector("#user-avatar");
   if (avatarEl) {
-    const parts = email.split("@")[0].split(/[._-]/);
-    avatarEl.textContent = parts.map((p) => p[0]?.toUpperCase() || "").join("").slice(0, 2) || "U";
+    avatarEl.textContent = emailParts.split(/[._-]/).map((p) => p[0]?.toUpperCase() || "").join("").slice(0, 2) || "U";
   }
+
+  // Load customized username and metadata asynchronously
+  getProfile().then((profile) => {
+    if (profile) {
+      const displayName = profile.username || profile.name || emailParts;
+      if (emailEl) emailEl.textContent = displayName;
+      if (avatarEl) {
+        const initials = (profile.name || displayName)
+          .split(" ")
+          .map((p) => p[0]?.toUpperCase() || "")
+          .join("")
+          .slice(0, 2) || "U";
+        avatarEl.textContent = initials;
+      }
+    }
+  }).catch(console.error);
 
   root.querySelector("#btn-sign-out")?.addEventListener("click", async () => {
     await signOut();
@@ -475,12 +538,14 @@ export async function renderApp(ctx) {
         const titleEl = root.querySelector("#profile-title");
         const avatarLarge = root.querySelector("#profile-avatar-large");
 
+        const usernameInput = root.querySelector("#profile-input-username");
         if (nameInput) nameInput.value = profile.name || "";
+        if (usernameInput) usernameInput.value = profile.username || "";
         if (instInput) instInput.value = profile.institution || "University of Ghana";
         if (roleInput) roleInput.value = profile.accountType || "Lecturer";
         if (uidInput) uidInput.value = profile.id || "";
         if (emailLabel) emailLabel.textContent = profile.email || "";
-        if (titleEl) titleEl.textContent = profile.name || "User Profile";
+        if (titleEl) titleEl.textContent = profile.username || profile.name || "User Profile";
         
         if (createdInput) {
           const dateStr = profile.createdAt ? new Date(profile.createdAt).toLocaleDateString() : "N/A";
@@ -520,10 +585,12 @@ export async function renderApp(ctx) {
 
   profileSave?.addEventListener("click", async () => {
     const nameInput = root.querySelector("#profile-input-name");
+    const usernameInput = root.querySelector("#profile-input-username");
     const instInput = root.querySelector("#profile-input-institution");
     const roleInput = root.querySelector("#profile-input-role");
 
     const name = nameInput?.value?.trim();
+    const username = usernameInput?.value?.trim() || emailParts;
     const institution = instInput?.value?.trim();
     const accountType = roleInput?.value;
 
@@ -541,11 +608,13 @@ export async function renderApp(ctx) {
     }
 
     try {
-      await updateProfile({ name, institution, accountType });
+      await updateProfile({ name, username, institution, accountType });
+      
+      if (emailEl) emailEl.textContent = username;
       
       const avatarEl = root.querySelector("#user-avatar");
       if (avatarEl) {
-        const initials = name
+        const initials = (name || username)
           .split(" ")
           .map((p) => p[0]?.toUpperCase() || "")
           .join("")
@@ -555,9 +624,9 @@ export async function renderApp(ctx) {
       
       const titleEl = root.querySelector("#profile-title");
       const avatarLarge = root.querySelector("#profile-avatar-large");
-      if (titleEl) titleEl.textContent = name;
+      if (titleEl) titleEl.textContent = username || name;
       if (avatarLarge) {
-        const initials = name
+        const initials = (name || username)
           .split(" ")
           .map((p) => p[0]?.toUpperCase() || "")
           .join("")
@@ -635,7 +704,11 @@ export async function renderApp(ctx) {
       }
     }
   });
-  exportBtn?.addEventListener("click", () => exportComparisonReport(root, email));
+  exportBtn?.addEventListener("click", async () => {
+    const prof = await getProfile().catch(() => null);
+    const displayName = prof?.username || session.user?.email || "User";
+    exportComparisonReport(root, displayName);
+  });
 
   // Load legacy engine modules once, then bind app.js to the fresh DOM each visit.
   if (!modulesLoaded) {
@@ -656,8 +729,12 @@ export async function renderApp(ctx) {
 
   fadeInPage(root);
   revealAppPanels(root);
+  
+  const cleanupTheme = initThemeToggle(root);
 
-  return () => {};
+  return () => {
+    cleanupTheme();
+  };
 }
 
 /**

@@ -466,6 +466,7 @@ export async function getProfile() {
       id: user.id,
       email: user.email,
       name: user.user_metadata?.full_name || user.user_metadata?.name || defaultName,
+      username: user.user_metadata?.username || user.user_metadata?.name || emailParts,
       avatarUrl: user.user_metadata?.avatar_url || null,
       createdAt: user.created_at,
       institution: user.user_metadata?.institution || "Supabase Workspace",
@@ -487,6 +488,7 @@ export async function getProfile() {
         id: session.user.id,
         email: session.user.email,
         name: defaultName,
+        username: emailParts,
         avatarUrl: null,
         createdAt: session.user.createdAt || new Date().toISOString(),
         institution: "University of Ghana",
@@ -499,15 +501,16 @@ export async function getProfile() {
   if (session.demo || readDemoSession()) {
     const emailParts = session.user.email.split("@")[0];
     const defaultName = emailParts.split(/[._-]/).map(p => p.charAt(0).toUpperCase() + p.slice(1)).join(" ");
-    const demoSess = session.user;
+    const demoSess = readDemoSession()?.user || session.user;
     return {
       id: demoSess.id || "demo-user",
       email: demoSess.email || "demo@scriptiq.local",
-      name: defaultName,
+      name: demoSess.name || defaultName,
+      username: demoSess.username || emailParts,
       avatarUrl: null,
       createdAt: new Date().toISOString(),
-      institution: "Demo Institution",
-      accountType: "Guest Lecturer"
+      institution: demoSess.institution || "Demo Institution",
+      accountType: demoSess.accountType || "Guest Lecturer"
     };
   }
 
@@ -519,6 +522,7 @@ export async function updateProfile(profileData) {
     const { data, error } = await supabase.auth.updateUser({
       data: {
         full_name: profileData.name,
+        username: profileData.username,
         institution: profileData.institution,
         accountType: profileData.accountType
       }
@@ -532,7 +536,21 @@ export async function updateProfile(profileData) {
     return await callBackend("/api/auth/profile", "POST", profileData);
   }
 
-  throw new Error("Cannot update profile in demo mode.");
+  if (cachedSession?.demo || readDemoSession()) {
+    const demoSess = readDemoSession();
+    if (demoSess) {
+      demoSess.user = demoSess.user || {};
+      demoSess.user.name = profileData.name;
+      demoSess.user.username = profileData.username;
+      demoSess.user.institution = profileData.institution;
+      demoSess.user.accountType = profileData.accountType;
+      localStorage.setItem(DEMO_SESSION_KEY, JSON.stringify(demoSess));
+      cachedSession = demoSess;
+      return { profile: demoSess.user };
+    }
+  }
+
+  throw new Error("Cannot update profile: no session.");
 }
 
 export { isBackendReachable };
