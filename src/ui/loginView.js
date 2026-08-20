@@ -38,17 +38,6 @@ export function renderLogin(ctx) {
     const backendMode = isLocalBackendMode();
     const supabaseMode = isAuthConfigured();
 
-    /* ── mode label ─────────────────────────────────────────────────── */
-    const modeLabel = supabaseMode
-      ? "Supabase Auth"
-      : "Local Backend Auth";
-
-    const modeBadge = `
-      <div class="auth-mode-badge">
-        <span class="auth-mode-dot ${supabaseMode ? "dot-supabase" : "dot-local"}"></span>
-        ${modeLabel}
-      </div>`;
-
     /* ── OAuth / passkey buttons ────────────────────────────────────── */
     const googleButton = `
       <button type="button" class="auth-btn" id="btn-google">
@@ -93,7 +82,7 @@ export function renderLogin(ctx) {
       <div class="auth-shell page-enter">
         <div class="auth-card glass-panel" role="dialog" aria-labelledby="auth-title">
  
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.25rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
             <div class="brand" style="margin:0;">
               <span class="brand-mark">S</span>
               <div>
@@ -106,7 +95,6 @@ export function renderLogin(ctx) {
             </button>
           </div>
  
-          ${modeBadge}
           <div id="auth-message" hidden></div>
  
           ${oauthSection}
@@ -142,6 +130,32 @@ export function renderLogin(ctx) {
     animateAuthCard(root.querySelector(".auth-card"));
     bindEvents();
     cleanupTheme = initThemeToggle(root);
+
+    const urlError = checkUrlErrors();
+    if (urlError) {
+      showMessage(urlError, "error");
+    }
+  }
+
+  function checkUrlErrors() {
+    try {
+      const params = new URLSearchParams(window.location.search);
+      let errorMsg = params.get("error_description") || params.get("error");
+      const hash = window.location.hash || "";
+      if (!errorMsg && hash.includes("error_description=")) {
+        const queryPart = hash.includes("?") ? hash.substring(hash.indexOf("?") + 1) : hash.substring(hash.indexOf("#") + 1);
+        const hashParams = new URLSearchParams(queryPart);
+        errorMsg = hashParams.get("error_description") || hashParams.get("error");
+      }
+      if (errorMsg) {
+        const cleanUrl = window.location.pathname + "#/login";
+        window.history.replaceState(null, document.title, cleanUrl);
+        return decodeURIComponent(errorMsg.replace(/\+/g, " "));
+      }
+    } catch {
+      // ignore
+    }
+    return null;
   }
 
   /* ── helpers ──────────────────────────────────────────────────────── */

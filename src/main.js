@@ -49,17 +49,27 @@ registerRoute("/app", (ctx) => {
 });
 
 // Keep session in sync across tabs; redirect from /app if signed out elsewhere.
-// Also handles the OAuth callback — when Supabase fires SIGNED_IN after exchanging
-// the ?code= param, navigate the user into the app automatically.
+// Also handles OAuth callback — when returning from Google OAuth with ?code= or ?error=,
+// navigate into the app automatically and clean query params.
 let authInitialized = false;
 onAuthStateChange((session, event) => {
   const path = window.location.hash.replace(/^#/, "") || "/";
+  const hasAuthCode = window.location.search.includes("code=");
+  const hasAuthError = window.location.search.includes("error=");
 
-  // Guard: on first fire (page load with existing session), only redirect
-  // if we're already on the login page — don't yank the user away from landing.
+  // If there's an OAuth error returned in query string, route to login to display it
+  if (hasAuthError && path !== "/login") {
+    window.location.hash = "#/login";
+    return;
+  }
+
+  // Guard: on first fire (page load with existing session)
   if (!authInitialized) {
     authInitialized = true;
-    if (session && path === "/login") {
+    if (session && (path === "/login" || hasAuthCode)) {
+      if (hasAuthCode) {
+        window.history.replaceState(null, document.title, window.location.pathname + "#/app");
+      }
       window.location.hash = "#/app";
     }
     return;
@@ -71,9 +81,11 @@ onAuthStateChange((session, event) => {
     return;
   }
 
-  // OAuth / magic-link callback: Supabase fires SIGNED_IN and we're on the
-  // root URL (no hash) — push into the app.
-  if (session && (path === "/" || path === "" || path === "/login")) {
+  // OAuth / magic-link callback: Supabase fires SIGNED_IN
+  if (session && (path === "/" || path === "" || path === "/login" || hasAuthCode)) {
+    if (hasAuthCode) {
+      window.history.replaceState(null, document.title, window.location.pathname + "#/app");
+    }
     window.location.hash = "#/app";
   }
 });
