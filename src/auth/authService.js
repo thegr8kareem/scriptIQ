@@ -175,7 +175,15 @@ export async function signInWithGoogle() {
     // detectSessionInUrl in the client will exchange the code, then onAuthStateChange
     // fires and main.js navigates to /app. Do NOT include #/app here — it breaks PKCE.
     const redirectTo = window.location.origin + window.location.pathname;
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google", options: { redirectTo } });
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: {
+        redirectTo,
+        queryParams: {
+          prompt: "select_account",
+        },
+      },
+    });
     if (error) throw error;
     return;
   }
@@ -467,7 +475,7 @@ export async function getProfile() {
       email: user.email,
       name: user.user_metadata?.full_name || user.user_metadata?.name || defaultName,
       username: user.user_metadata?.username || user.user_metadata?.name || emailParts,
-      avatarUrl: user.user_metadata?.avatar_url || null,
+      avatarUrl: user.user_metadata?.avatar_url || user.user_metadata?.picture || null,
       createdAt: user.created_at,
       institution: user.user_metadata?.institution || "Supabase Workspace",
       accountType: user.user_metadata?.accountType || "Lecturer"
